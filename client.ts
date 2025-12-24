@@ -50,6 +50,8 @@ import {
   StravaWebhookEvent,
   StravaWebhookVerificationRequest,
   CreateWebhookSubscriptionOptions,
+  STRAVA_WEBHOOK_OBJECT_TYPES,
+  STRAVA_WEBHOOK_ASPECT_TYPES,
 } from "./types";
 import {
   parseStravaError,
@@ -78,6 +80,87 @@ const DEFAULT_ACTIVITY_STREAM_KEYS: StravaStreamType[] = [
 
 /** Default stream keys for segment and segment effort streams */
 const DEFAULT_SEGMENT_STREAM_KEYS: StravaStreamType[] = ["distance", "altitude"];
+
+// ============================================================================
+// Pure Webhook Validation Functions (exported for standalone use)
+// ============================================================================
+
+/**
+ * Validate a webhook verification request from Strava.
+ * Call this when you receive a GET request to your callback URL.
+ *
+ * This is a pure function that can be used without a StravaClient instance.
+ *
+ * @param request - The verification request parameters from Strava
+ * @param expectedVerifyToken - Your expected verification token
+ * @returns The challenge string to echo back if valid, or null if invalid
+ */
+export function validateWebhookVerification(
+  request: StravaWebhookVerificationRequest,
+  expectedVerifyToken: string
+): string | null {
+  if (request["hub.mode"] === "subscribe" && request["hub.verify_token"] === expectedVerifyToken) {
+    return request["hub.challenge"];
+  }
+  return null;
+}
+
+/**
+ * Parse and validate a webhook event payload.
+ * Use this to safely parse the JSON body from webhook POST requests.
+ *
+ * This is a pure function that can be used without a StravaClient instance.
+ *
+ * @param payload - The raw webhook event payload
+ * @returns A validated StravaWebhookEvent
+ * @throws StravaValidationError if the payload is invalid
+ */
+export function parseWebhookEvent(payload: unknown): StravaWebhookEvent {
+  const event = payload as StravaWebhookEvent;
+
+  // Basic type validation with specific error messages
+  if (typeof event.object_type !== "string") {
+    throw new StravaValidationError("Invalid webhook event: missing or invalid object_type");
+  }
+  if (typeof event.object_id !== "number") {
+    throw new StravaValidationError("Invalid webhook event: missing or invalid object_id");
+  }
+  if (typeof event.aspect_type !== "string") {
+    throw new StravaValidationError("Invalid webhook event: missing or invalid aspect_type");
+  }
+  if (typeof event.owner_id !== "number") {
+    throw new StravaValidationError("Invalid webhook event: missing or invalid owner_id");
+  }
+  if (typeof event.subscription_id !== "number") {
+    throw new StravaValidationError("Invalid webhook event: missing or invalid subscription_id");
+  }
+  if (typeof event.event_time !== "number") {
+    throw new StravaValidationError("Invalid webhook event: missing or invalid event_time");
+  }
+
+  // Enum validation using const assertions (type-safe)
+  if (
+    !STRAVA_WEBHOOK_OBJECT_TYPES.includes(
+      event.object_type as (typeof STRAVA_WEBHOOK_OBJECT_TYPES)[number]
+    )
+  ) {
+    throw new StravaValidationError(
+      `Invalid webhook event: object_type must be one of [${STRAVA_WEBHOOK_OBJECT_TYPES.join(", ")}], got "${event.object_type}"`
+    );
+  }
+
+  if (
+    !STRAVA_WEBHOOK_ASPECT_TYPES.includes(
+      event.aspect_type as (typeof STRAVA_WEBHOOK_ASPECT_TYPES)[number]
+    )
+  ) {
+    throw new StravaValidationError(
+      `Invalid webhook event: aspect_type must be one of [${STRAVA_WEBHOOK_ASPECT_TYPES.join(", ")}], got "${event.aspect_type}"`
+    );
+  }
+
+  return event;
+}
 
 type RequiredConfig = Required<Omit<StravaClientConfig, "onRequest" | "onResponse">> &
   Pick<StravaClientConfig, "onRequest" | "onResponse">;
@@ -1218,52 +1301,23 @@ export class StravaClient {
    * Validate a webhook verification request from Strava.
    * Call this when you receive a GET request to your callback URL.
    *
+   * @deprecated Use the standalone `validateWebhookVerification()` function instead.
    * @returns The challenge string to echo back if valid, or null if invalid
    */
   public validateWebhookVerification(
     request: StravaWebhookVerificationRequest,
     expectedVerifyToken: string
   ): string | null {
-    if (
-      request["hub.mode"] === "subscribe" &&
-      request["hub.verify_token"] === expectedVerifyToken
-    ) {
-      return request["hub.challenge"];
-    }
-    return null;
+    return validateWebhookVerification(request, expectedVerifyToken);
   }
 
   /**
    * Parse a webhook event payload.
    * Use this to safely parse the JSON body from webhook POST requests.
+   *
+   * @deprecated Use the standalone `parseWebhookEvent()` function instead.
    */
   public parseWebhookEvent(payload: unknown): StravaWebhookEvent {
-    const event = payload as StravaWebhookEvent;
-
-    // Basic type validation
-    if (
-      typeof event.object_type !== "string" ||
-      typeof event.object_id !== "number" ||
-      typeof event.aspect_type !== "string" ||
-      typeof event.owner_id !== "number" ||
-      typeof event.subscription_id !== "number" ||
-      typeof event.event_time !== "number"
-    ) {
-      throw new StravaValidationError("Invalid webhook event payload");
-    }
-
-    // Enum validation
-    const validObjectTypes = ["activity", "athlete"];
-    const validAspectTypes = ["create", "update", "delete"];
-
-    if (!validObjectTypes.includes(event.object_type)) {
-      throw new StravaValidationError("Invalid webhook event payload");
-    }
-
-    if (!validAspectTypes.includes(event.aspect_type)) {
-      throw new StravaValidationError("Invalid webhook event payload");
-    }
-
-    return event;
+    return parseWebhookEvent(payload);
   }
 }

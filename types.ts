@@ -709,11 +709,17 @@ export interface StravaWebhookSubscription {
   updated_at: string;
 }
 
+/** Valid object types in webhook events (const assertion for runtime validation) */
+export const STRAVA_WEBHOOK_OBJECT_TYPES = ["activity", "athlete"] as const;
+
 /** Object type in webhook event */
-export type StravaWebhookObjectType = "activity" | "athlete";
+export type StravaWebhookObjectType = (typeof STRAVA_WEBHOOK_OBJECT_TYPES)[number];
+
+/** Valid aspect types in webhook events (const assertion for runtime validation) */
+export const STRAVA_WEBHOOK_ASPECT_TYPES = ["create", "update", "delete"] as const;
 
 /** Aspect type (action) in webhook event */
-export type StravaWebhookAspectType = "create" | "update" | "delete";
+export type StravaWebhookAspectType = (typeof STRAVA_WEBHOOK_ASPECT_TYPES)[number];
 
 /** Webhook event payload from Strava */
 export interface StravaWebhookEvent {

@@ -8,6 +8,12 @@
 // Main client
 export { StravaClient } from "./client";
 
+// Webhook validation functions (pure, can be used standalone)
+export { validateWebhookVerification, parseWebhookEvent } from "./client";
+
+// Constants for webhook validation
+export { STRAVA_WEBHOOK_OBJECT_TYPES, STRAVA_WEBHOOK_ASPECT_TYPES } from "./types";
+
 // Type definitions
 export type {
   // OAuth

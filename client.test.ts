@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { StravaClient } from "./client";
+import { StravaClient, validateWebhookVerification, parseWebhookEvent } from "./client";
 import {
   StravaAuthenticationError,
   StravaRateLimitError,
   StravaNotFoundError,
   StravaNetworkError,
+  StravaValidationError,
 } from "./errors";
 
 // Mock fetch globally
@@ -954,18 +955,18 @@ describe("StravaClient", () => {
       expect(event.updates).toBeUndefined();
     });
 
-    it("should throw on invalid webhook event", () => {
+    it("should throw on missing required field with specific error", () => {
       const invalidPayload = {
         object_type: "activity",
         // missing other fields
       };
 
       expect(() => client.parseWebhookEvent(invalidPayload)).toThrow(
-        "Invalid webhook event payload"
+        "Invalid webhook event: missing or invalid object_id"
       );
     });
 
-    it("should throw on invalid object_type", () => {
+    it("should throw on invalid object_type with descriptive error", () => {
       const invalidPayload = {
         object_type: "invalid_type",
         object_id: 12345678,
@@ -976,11 +977,11 @@ describe("StravaClient", () => {
       };
 
       expect(() => client.parseWebhookEvent(invalidPayload)).toThrow(
-        "Invalid webhook event payload"
+        'object_type must be one of [activity, athlete], got "invalid_type"'
       );
     });
 
-    it("should throw on invalid aspect_type", () => {
+    it("should throw on invalid aspect_type with descriptive error", () => {
       const invalidPayload = {
         object_type: "activity",
         object_id: 12345678,
@@ -991,7 +992,7 @@ describe("StravaClient", () => {
       };
 
       expect(() => client.parseWebhookEvent(invalidPayload)).toThrow(
-        "Invalid webhook event payload"
+        'aspect_type must be one of [create, update, delete], got "invalid_aspect"'
       );
     });
   });
@@ -1093,6 +1094,98 @@ describe("StravaClient", () => {
         expect.objectContaining({
           signal: expect.any(AbortSignal),
         })
+      );
+    });
+  });
+});
+
+// ============================================================================
+// Pure Function Tests (standalone webhook validation)
+// ============================================================================
+
+describe("Pure Webhook Validation Functions", () => {
+  describe("validateWebhookVerification", () => {
+    it("should return challenge when verification is valid", () => {
+      const request = {
+        "hub.mode": "subscribe",
+        "hub.verify_token": "my-secret",
+        "hub.challenge": "challenge-123",
+      };
+
+      const result = validateWebhookVerification(request, "my-secret");
+      expect(result).toBe("challenge-123");
+    });
+
+    it("should return null when verify token is wrong", () => {
+      const request = {
+        "hub.mode": "subscribe",
+        "hub.verify_token": "wrong-token",
+        "hub.challenge": "challenge-123",
+      };
+
+      const result = validateWebhookVerification(request, "my-secret");
+      expect(result).toBeNull();
+    });
+
+    it("should return null when mode is not subscribe", () => {
+      const request = {
+        "hub.mode": "unsubscribe",
+        "hub.verify_token": "my-secret",
+        "hub.challenge": "challenge-123",
+      };
+
+      const result = validateWebhookVerification(request, "my-secret");
+      expect(result).toBeNull();
+    });
+  });
+
+  describe("parseWebhookEvent", () => {
+    it("should parse valid activity create event", () => {
+      const payload = {
+        object_type: "activity",
+        object_id: 12345,
+        aspect_type: "create",
+        owner_id: 67890,
+        subscription_id: 111,
+        event_time: 1704067200,
+      };
+
+      const event = parseWebhookEvent(payload);
+      expect(event).toEqual(payload);
+    });
+
+    it("should parse valid athlete update event with updates", () => {
+      const payload = {
+        object_type: "athlete",
+        object_id: 12345,
+        aspect_type: "update",
+        updates: { authorized: "false" },
+        owner_id: 12345,
+        subscription_id: 111,
+        event_time: 1704067200,
+      };
+
+      const event = parseWebhookEvent(payload);
+      expect(event).toEqual(payload);
+    });
+
+    it("should throw StravaValidationError for missing fields", () => {
+      expect(() => parseWebhookEvent({})).toThrow(StravaValidationError);
+      expect(() => parseWebhookEvent({})).toThrow("missing or invalid object_type");
+    });
+
+    it("should throw with invalid object_type value", () => {
+      const payload = {
+        object_type: "route", // invalid
+        object_id: 12345,
+        aspect_type: "create",
+        owner_id: 67890,
+        subscription_id: 111,
+        event_time: 1704067200,
+      };
+
+      expect(() => parseWebhookEvent(payload)).toThrow(
+        'object_type must be one of [activity, athlete], got "route"'
       );
     });
   });
