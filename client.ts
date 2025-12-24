@@ -36,6 +36,7 @@ import {
   StravaStreamType,
   StravaRateLimitInfo,
   StravaClientConfig,
+  RequestOptions,
   GetActivitiesOptions,
   GetActivityStreamsOptions,
   CreateActivityOptions,
@@ -101,6 +102,7 @@ export class StravaClient {
       headers?: Record<string, string>;
       baseUrl?: string;
       skipAuth?: boolean;
+      signal?: AbortSignal;
     } = {}
   ): Promise<T> {
     // Auto-refresh token if needed
@@ -141,6 +143,7 @@ export class StravaClient {
       headers,
       body: options.body ? JSON.stringify(options.body) : undefined,
       parseResponse: (response) => response.json() as Promise<T>,
+      signal: options.signal,
     });
   }
 
@@ -209,12 +212,34 @@ export class StravaClient {
       context?: string;
       skipRateLimit?: boolean;
       timeout?: number;
+      signal?: AbortSignal;
     }
   ): Promise<T> {
     const controller = new AbortController();
     const timeout = options.timeout ?? this.config.timeout;
     const timeoutId = setTimeout(() => controller.abort(), timeout);
     const startTime = Date.now();
+
+    // Track if this is a user-initiated abort vs timeout
+    let isUserAbort = false;
+    if (options.signal) {
+      // Check if already aborted
+      if (options.signal.aborted) {
+        isUserAbort = true;
+        controller.abort();
+      } else {
+        // Abort our controller when user's signal aborts
+        const onUserAbort = () => {
+          isUserAbort = true;
+          controller.abort();
+        };
+        options.signal.addEventListener("abort", onUserAbort, { once: true });
+        // Clean up listener when we're done
+        controller.signal.addEventListener("abort", () => {
+          options.signal?.removeEventListener("abort", onUserAbort);
+        }, { once: true });
+      }
+    }
 
     // Call onRequest hook if configured
     if (this.config.onRequest) {
@@ -270,6 +295,10 @@ export class StravaClient {
       clearTimeout(timeoutId);
 
       if (error instanceof Error && error.name === "AbortError") {
+        if (isUserAbort) {
+          // Re-throw as AbortError for user-initiated cancellation
+          throw error;
+        }
         throw new StravaNetworkError("Request timed out");
       }
 
@@ -578,6 +607,7 @@ export class StravaClient {
         page: options.page || 1,
         per_page: options.per_page || 30,
       },
+      signal: options.signal,
     });
   }
 
