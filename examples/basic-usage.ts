@@ -3,27 +3,27 @@
  * Demonstrates the most common use cases for the Strava API Client
  */
 
-import { StravaClient } from '../index';
+import { StravaClient } from "../index";
 
 async function basicUsage() {
   // Initialize the client
   const client = new StravaClient({
     clientId: process.env.STRAVA_CLIENT_ID!,
     clientSecret: process.env.STRAVA_CLIENT_SECRET!,
-    redirectUri: process.env.REDIRECT_URI || 'http://localhost:3000/callback',
+    redirectUri: process.env.REDIRECT_URI || "http://localhost:3000/callback",
   });
 
-  console.log('Strava API Client - Basic Usage Example\n');
+  console.log("Strava API Client - Basic Usage Example\n");
 
   // Step 1: Get authorization URL (redirect user to this URL)
-  const authUrl = client.getAuthorizationUrl('activity:read_all');
-  console.log('1. Authorization URL:');
+  const authUrl = client.getAuthorizationUrl("activity:read_all");
+  console.log("1. Authorization URL:");
   console.log(authUrl);
-  console.log('\nRedirect the user to this URL to authorize your app.\n');
+  console.log("\nRedirect the user to this URL to authorize your app.\n");
 
   // Step 2: After user authorizes, you'll receive a code
   // Exchange it for tokens (this is simulated here)
-  const authCode = 'YOUR_AUTH_CODE_HERE'; // You'll get this from the callback
+  const authCode = "YOUR_AUTH_CODE_HERE"; // You'll get this from the callback
 
   try {
     // Uncomment the following when you have a real auth code:
@@ -35,20 +35,20 @@ async function basicUsage() {
 
     // For this example, set tokens manually (replace with your actual tokens)
     client.setTokens({
-      accessToken: process.env.STRAVA_ACCESS_TOKEN || '',
-      refreshToken: process.env.STRAVA_REFRESH_TOKEN || '',
-      expiresAt: parseInt(process.env.STRAVA_EXPIRES_AT || '0'),
+      accessToken: process.env.STRAVA_ACCESS_TOKEN || "",
+      refreshToken: process.env.STRAVA_REFRESH_TOKEN || "",
+      expiresAt: parseInt(process.env.STRAVA_EXPIRES_AT || "0"),
     });
 
     // Step 3: Get athlete information
-    console.log('3. Fetching athlete information...');
+    console.log("3. Fetching athlete information...");
     const athlete = await client.getAthlete();
     console.log(`   Name: ${athlete.firstname} ${athlete.lastname}`);
     console.log(`   Location: ${athlete.city}, ${athlete.country}`);
-    console.log(`   Premium: ${athlete.premium ? 'Yes' : 'No'}\n`);
+    console.log(`   Premium: ${athlete.premium ? "Yes" : "No"}\n`);
 
     // Step 4: Get recent activities
-    console.log('4. Fetching recent activities...');
+    console.log("4. Fetching recent activities...");
     const activities = await client.getActivities({ per_page: 5 });
     console.log(`   Found ${activities.length} recent activities:\n`);
 
@@ -63,7 +63,7 @@ async function basicUsage() {
     });
 
     // Step 5: Get athlete stats
-    console.log('5. Fetching athlete stats...');
+    console.log("5. Fetching athlete stats...");
     const stats = await client.getAthleteStats(athlete.id);
     if (stats.all_run_totals) {
       const totalDistanceKm = (stats.all_run_totals.distance / 1000).toFixed(2);
@@ -77,7 +77,7 @@ async function basicUsage() {
     // Step 6: Check rate limits
     const rateLimits = client.getRateLimitInfo();
     if (rateLimits) {
-      console.log('6. Rate Limit Status:');
+      console.log("6. Rate Limit Status:");
       console.log(`   15-min: ${rateLimits.shortTerm.usage}/${rateLimits.shortTerm.limit}`);
       console.log(`   Daily: ${rateLimits.longTerm.usage}/${rateLimits.longTerm.limit}\n`);
     }
@@ -85,20 +85,20 @@ async function basicUsage() {
     // Step 7: Get detailed activity with streams
     if (activities.length > 0) {
       const firstActivity = activities[0];
-      console.log('7. Fetching detailed activity data...');
+      console.log("7. Fetching detailed activity data...");
       const detailedActivity = await client.getActivity(firstActivity.id, true);
       console.log(`   Activity: ${detailedActivity.name}`);
       console.log(`   Elevation gain: ${detailedActivity.total_elevation_gain}m`);
-      console.log(`   Average HR: ${detailedActivity.average_heartrate || 'N/A'}`);
-      console.log(`   Calories: ${detailedActivity.calories || 'N/A'}\n`);
+      console.log(`   Average HR: ${detailedActivity.average_heartrate || "N/A"}`);
+      console.log(`   Calories: ${detailedActivity.calories || "N/A"}\n`);
 
       // Get streams data
-      console.log('8. Fetching activity streams...');
+      console.log("8. Fetching activity streams...");
       const streams = await client.getActivityStreams(firstActivity.id, {
-        keys: ['time', 'distance', 'altitude', 'heartrate'],
+        keys: ["time", "distance", "altitude", "heartrate"],
       });
 
-      console.log('   Available streams:');
+      console.log("   Available streams:");
       Object.keys(streams).forEach((key) => {
         const stream = streams[key as keyof typeof streams];
         if (stream) {
@@ -108,9 +108,9 @@ async function basicUsage() {
       console.log();
     }
 
-    console.log('✅ Example completed successfully!');
+    console.log("✅ Example completed successfully!");
   } catch (error) {
-    console.error('❌ Error:', error);
+    console.error("❌ Error:", error);
   }
 }
 

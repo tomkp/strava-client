@@ -29,12 +29,12 @@ pnpm add strava-client
 ### 1. Initialize the Client
 
 ```typescript
-import { StravaClient } from 'strava-client';
+import { StravaClient } from "strava-client";
 
 const client = new StravaClient({
   clientId: process.env.STRAVA_CLIENT_ID!,
   clientSecret: process.env.STRAVA_CLIENT_SECRET!,
-  redirectUri: 'http://localhost:3000/auth/callback',
+  redirectUri: "http://localhost:3000/auth/callback",
 });
 ```
 
@@ -42,7 +42,7 @@ const client = new StravaClient({
 
 ```typescript
 // Redirect user to Strava authorization
-const authUrl = client.getAuthorizationUrl('activity:read_all');
+const authUrl = client.getAuthorizationUrl("activity:read_all");
 // Redirect to: authUrl
 
 // After user authorizes, exchange code for tokens
@@ -74,8 +74,8 @@ const streams = await client.getActivityStreams(activityId);
 ### Express.js Integration
 
 ```typescript
-import express from 'express';
-import { StravaClient, StravaTokens } from 'strava-client';
+import express from "express";
+import { StravaClient, StravaTokens } from "strava-client";
 
 const app = express();
 
@@ -83,7 +83,7 @@ const app = express();
 const stravaClient = new StravaClient({
   clientId: process.env.STRAVA_CLIENT_ID!,
   clientSecret: process.env.STRAVA_CLIENT_SECRET!,
-  redirectUri: 'http://localhost:3000/auth/callback',
+  redirectUri: "http://localhost:3000/auth/callback",
   onTokenRefresh: async (tokens) => {
     // Save refreshed tokens to database
     await db.updateTokens(userId, tokens);
@@ -91,12 +91,12 @@ const stravaClient = new StravaClient({
 });
 
 // OAuth routes
-app.get('/auth/strava', (req, res) => {
-  const authUrl = stravaClient.getAuthorizationUrl('activity:read_all');
+app.get("/auth/strava", (req, res) => {
+  const authUrl = stravaClient.getAuthorizationUrl("activity:read_all");
   res.redirect(authUrl);
 });
 
-app.get('/auth/callback', async (req, res) => {
+app.get("/auth/callback", async (req, res) => {
   const { code } = req.query;
 
   try {
@@ -110,15 +110,15 @@ app.get('/auth/callback', async (req, res) => {
       expiresAt: tokenResponse.expires_at,
     });
 
-    res.redirect('/dashboard');
+    res.redirect("/dashboard");
   } catch (error) {
-    console.error('OAuth error:', error);
-    res.redirect('/error');
+    console.error("OAuth error:", error);
+    res.redirect("/error");
   }
 });
 
 // API routes
-app.get('/api/activities', async (req, res) => {
+app.get("/api/activities", async (req, res) => {
   try {
     // Load tokens from database
     const tokens = await db.getUserTokens(userId);
@@ -128,8 +128,8 @@ app.get('/api/activities', async (req, res) => {
     const activities = await stravaClient.getActivities();
     res.json(activities);
   } catch (error) {
-    console.error('Error fetching activities:', error);
-    res.status(500).json({ error: 'Failed to fetch activities' });
+    console.error("Error fetching activities:", error);
+    res.status(500).json({ error: "Failed to fetch activities" });
   }
 });
 ```
@@ -137,7 +137,7 @@ app.get('/api/activities', async (req, res) => {
 ### With Automatic Token Refresh
 
 ```typescript
-import { StravaClient } from 'strava-client';
+import { StravaClient } from "strava-client";
 
 const client = new StravaClient({
   clientId: process.env.STRAVA_CLIENT_ID!,
@@ -146,7 +146,7 @@ const client = new StravaClient({
   refreshBuffer: 600, // Refresh 10 minutes before expiry (default: 600)
   onTokenRefresh: async (tokens) => {
     // This callback is called whenever tokens are refreshed
-    console.log('Tokens refreshed!');
+    console.log("Tokens refreshed!");
     await database.updateTokens(userId, {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
@@ -172,7 +172,7 @@ const allActivities = await client.getAllActivities();
 console.log(`Total activities: ${allActivities.length}`);
 
 // Fetch activities after a specific date
-const after = new Date('2024-01-01').getTime() / 1000;
+const after = new Date("2024-01-01").getTime() / 1000;
 const recentActivities = await client.getAllActivities({ after });
 
 // Fetch with manual pagination control
@@ -204,23 +204,23 @@ import {
   StravaAuthenticationError,
   StravaNotFoundError,
   isStravaErrorType,
-} from 'strava-client';
+} from "strava-client";
 
 try {
   const activities = await client.getActivities();
 } catch (error) {
   // Handle specific error types
   if (isStravaErrorType(error, StravaRateLimitError)) {
-    console.error('Rate limit exceeded!');
+    console.error("Rate limit exceeded!");
     console.error(`Retry after: ${error.retryAfter} seconds`);
     console.error(`Current usage: ${error.usage}`);
   } else if (isStravaErrorType(error, StravaAuthenticationError)) {
-    console.error('Authentication failed - tokens may be invalid');
+    console.error("Authentication failed - tokens may be invalid");
     // Redirect user to re-authenticate
   } else if (isStravaErrorType(error, StravaNotFoundError)) {
-    console.error('Resource not found');
+    console.error("Resource not found");
   } else {
-    console.error('Unexpected error:', error);
+    console.error("Unexpected error:", error);
   }
 }
 ```
@@ -234,13 +234,13 @@ const activities = await client.getActivities();
 // Check rate limit status
 const rateLimits = client.getRateLimitInfo();
 if (rateLimits) {
-  console.log('15-minute limit:', rateLimits.shortTerm);
-  console.log('Daily limit:', rateLimits.longTerm);
+  console.log("15-minute limit:", rateLimits.shortTerm);
+  console.log("Daily limit:", rateLimits.longTerm);
 
   // Check if approaching limits
   const shortTermPercent = (rateLimits.shortTerm.usage / rateLimits.shortTerm.limit) * 100;
   if (shortTermPercent > 80) {
-    console.warn('Approaching short-term rate limit!');
+    console.warn("Approaching short-term rate limit!");
   }
 }
 ```
@@ -257,16 +257,16 @@ console.log(`Moving Time: ${activity.moving_time}s`);
 
 // Get time-series data (streams)
 const streams = await client.getActivityStreams(activityId, {
-  keys: ['time', 'distance', 'altitude', 'heartrate'],
+  keys: ["time", "distance", "altitude", "heartrate"],
   key_by_type: true,
 });
 
 if (streams.heartrate) {
-  console.log('Heart rate data:', streams.heartrate.data);
+  console.log("Heart rate data:", streams.heartrate.data);
 }
 
 if (streams.altitude) {
-  console.log('Elevation data:', streams.altitude.data);
+  console.log("Elevation data:", streams.altitude.data);
 }
 ```
 
@@ -281,6 +281,7 @@ new StravaClient(config: StravaClientConfig)
 ```
 
 **Config Options:**
+
 - `clientId` (required): Your Strava OAuth client ID
 - `clientSecret` (required): Your Strava OAuth client secret
 - `redirectUri` (optional): OAuth callback URL
@@ -291,6 +292,7 @@ new StravaClient(config: StravaClientConfig)
 #### Methods
 
 **Token Management:**
+
 - `setTokens(tokens)` - Set authentication tokens
 - `getTokens()` - Get current tokens
 - `clearTokens()` - Clear tokens (logout)
@@ -301,10 +303,12 @@ new StravaClient(config: StravaClientConfig)
 - `deauthorize()` - Revoke application access
 
 **Athlete:**
+
 - `getAthlete()` - Get authenticated athlete
 - `getAthleteStats(athleteId)` - Get athlete statistics
 
 **Activities:**
+
 - `getActivities(options?)` - Get activities (paginated)
 - `getAllActivities(options?)` - Get all activities (auto-pagination)
 - `getActivity(activityId, includeAllEfforts?)` - Get activity details
@@ -313,6 +317,7 @@ new StravaClient(config: StravaClientConfig)
 - `getActivityLaps(activityId)` - Get activity laps
 
 **Utilities:**
+
 - `testConnection()` - Test API connection
 - `getClientInfo()` - Get client state summary
 - `getRateLimitInfo()` - Get current rate limit info
@@ -343,6 +348,7 @@ The client provides specific error classes for different scenarios:
 ## Strava Rate Limits
 
 Strava has two rate limits:
+
 - **Short-term**: 200 requests per 15 minutes
 - **Long-term**: 2,000 requests per day
 
@@ -351,6 +357,7 @@ Use `client.getRateLimitInfo()` to monitor your usage.
 ## OAuth Scopes
 
 Common OAuth scopes:
+
 - `read` - Read public data
 - `read_all` - Read private data
 - `activity:read` - Read activities

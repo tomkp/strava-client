@@ -15,15 +15,6 @@
     "resolveJsonModule": true,
     "moduleResolution": "node"
   },
-  "include": [
-    "index.ts",
-    "client.ts",
-    "types.ts",
-    "errors.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "examples"
-  ]
+  "include": ["index.ts", "client.ts", "types.ts", "errors.ts"],
+  "exclude": ["node_modules", "dist", "examples"]
 }

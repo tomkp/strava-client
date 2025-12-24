@@ -3,9 +3,9 @@
  * Complete example of integrating the Strava API client with Express.js
  */
 
-import express, { Request, Response } from 'express';
-import cookieParser from 'cookie-parser';
-import { StravaClient, StravaTokens, StravaRateLimitError } from '../index';
+import express, { Request, Response } from "express";
+import cookieParser from "cookie-parser";
+import { StravaClient, StravaTokens, StravaRateLimitError } from "../index";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -21,7 +21,7 @@ const stravaClient = new StravaClient({
   redirectUri: process.env.REDIRECT_URI || `http://localhost:${PORT}/auth/callback`,
   onTokenRefresh: async (tokens) => {
     // In a real app, save refreshed tokens to your database
-    console.log('Tokens refreshed at:', new Date().toISOString());
+    console.log("Tokens refreshed at:", new Date().toISOString());
     // await database.updateTokens(userId, tokens);
   },
 });
@@ -36,19 +36,19 @@ const userTokens = new Map<string, StravaTokens>();
 /**
  * Initiate OAuth flow
  */
-app.get('/auth/strava', (req: Request, res: Response) => {
-  const authUrl = stravaClient.getAuthorizationUrl('activity:read_all', { state: 'random-state' });
+app.get("/auth/strava", (req: Request, res: Response) => {
+  const authUrl = stravaClient.getAuthorizationUrl("activity:read_all", { state: "random-state" });
   res.redirect(authUrl);
 });
 
 /**
  * OAuth callback
  */
-app.get('/auth/callback', async (req: Request, res: Response) => {
+app.get("/auth/callback", async (req: Request, res: Response) => {
   const { code, state } = req.query;
 
   if (!code) {
-    return res.status(400).send('Authorization code missing');
+    return res.status(400).send("Authorization code missing");
   }
 
   try {
@@ -64,7 +64,7 @@ app.get('/auth/callback', async (req: Request, res: Response) => {
     });
 
     // Set session cookie
-    res.cookie('strava_user_id', userId, {
+    res.cookie("strava_user_id", userId, {
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
     });
@@ -79,20 +79,20 @@ app.get('/auth/callback', async (req: Request, res: Response) => {
       </html>
     `);
   } catch (error) {
-    console.error('OAuth error:', error);
-    res.status(500).send('Authentication failed');
+    console.error("OAuth error:", error);
+    res.status(500).send("Authentication failed");
   }
 });
 
 /**
  * Logout
  */
-app.post('/auth/logout', (req: Request, res: Response) => {
+app.post("/auth/logout", (req: Request, res: Response) => {
   const userId = req.cookies.strava_user_id;
   if (userId) {
     userTokens.delete(userId);
   }
-  res.clearCookie('strava_user_id');
+  res.clearCookie("strava_user_id");
   res.json({ success: true });
 });
 
@@ -107,7 +107,7 @@ function requireAuth(req: Request, res: Response, next: express.NextFunction) {
   const userId = req.cookies.strava_user_id;
 
   if (!userId || !userTokens.has(userId)) {
-    return res.status(401).json({ error: 'Not authenticated' });
+    return res.status(401).json({ error: "Not authenticated" });
   }
 
   // Load tokens into client
@@ -120,7 +120,7 @@ function requireAuth(req: Request, res: Response, next: express.NextFunction) {
 /**
  * Dashboard page
  */
-app.get('/dashboard', requireAuth, (req: Request, res: Response) => {
+app.get("/dashboard", requireAuth, (req: Request, res: Response) => {
   res.send(`
     <html>
       <head>
@@ -161,34 +161,34 @@ app.get('/dashboard', requireAuth, (req: Request, res: Response) => {
 /**
  * Get athlete info
  */
-app.get('/api/athlete', requireAuth, async (req: Request, res: Response) => {
+app.get("/api/athlete", requireAuth, async (req: Request, res: Response) => {
   try {
     const athlete = await stravaClient.getAthlete();
     res.json(athlete);
   } catch (error) {
-    console.error('Error fetching athlete:', error);
-    res.status(500).json({ error: 'Failed to fetch athlete data' });
+    console.error("Error fetching athlete:", error);
+    res.status(500).json({ error: "Failed to fetch athlete data" });
   }
 });
 
 /**
  * Get athlete stats
  */
-app.get('/api/stats', requireAuth, async (req: Request, res: Response) => {
+app.get("/api/stats", requireAuth, async (req: Request, res: Response) => {
   try {
     const athlete = await stravaClient.getAthlete();
     const stats = await stravaClient.getAthleteStats(athlete.id);
     res.json(stats);
   } catch (error) {
-    console.error('Error fetching stats:', error);
-    res.status(500).json({ error: 'Failed to fetch stats' });
+    console.error("Error fetching stats:", error);
+    res.status(500).json({ error: "Failed to fetch stats" });
   }
 });
 
 /**
  * Get activities
  */
-app.get('/api/activities', requireAuth, async (req: Request, res: Response) => {
+app.get("/api/activities", requireAuth, async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const perPage = parseInt(req.query.per_page as string) || 30;
@@ -201,27 +201,33 @@ app.get('/api/activities', requireAuth, async (req: Request, res: Response) => {
     // Include rate limit info in response headers
     const rateLimits = stravaClient.getRateLimitInfo();
     if (rateLimits) {
-      res.setHeader('X-RateLimit-Short', `${rateLimits.shortTerm.usage}/${rateLimits.shortTerm.limit}`);
-      res.setHeader('X-RateLimit-Daily', `${rateLimits.longTerm.usage}/${rateLimits.longTerm.limit}`);
+      res.setHeader(
+        "X-RateLimit-Short",
+        `${rateLimits.shortTerm.usage}/${rateLimits.shortTerm.limit}`
+      );
+      res.setHeader(
+        "X-RateLimit-Daily",
+        `${rateLimits.longTerm.usage}/${rateLimits.longTerm.limit}`
+      );
     }
 
     res.json(activities);
   } catch (error) {
     if (error instanceof StravaRateLimitError) {
       return res.status(429).json({
-        error: 'Rate limit exceeded',
+        error: "Rate limit exceeded",
         retryAfter: error.retryAfter,
       });
     }
-    console.error('Error fetching activities:', error);
-    res.status(500).json({ error: 'Failed to fetch activities' });
+    console.error("Error fetching activities:", error);
+    res.status(500).json({ error: "Failed to fetch activities" });
   }
 });
 
 /**
  * Get all activities (with pagination handled automatically)
  */
-app.get('/api/activities/all', requireAuth, async (req: Request, res: Response) => {
+app.get("/api/activities/all", requireAuth, async (req: Request, res: Response) => {
   try {
     const after = req.query.after ? parseInt(req.query.after as string) : undefined;
 
@@ -231,52 +237,52 @@ app.get('/api/activities/all', requireAuth, async (req: Request, res: Response) 
       activities,
     });
   } catch (error) {
-    console.error('Error fetching all activities:', error);
-    res.status(500).json({ error: 'Failed to fetch all activities' });
+    console.error("Error fetching all activities:", error);
+    res.status(500).json({ error: "Failed to fetch all activities" });
   }
 });
 
 /**
  * Get activity details
  */
-app.get('/api/activities/:id', requireAuth, async (req: Request, res: Response) => {
+app.get("/api/activities/:id", requireAuth, async (req: Request, res: Response) => {
   try {
     const activityId = parseInt(req.params.id);
     const activity = await stravaClient.getActivity(activityId, true);
     res.json(activity);
   } catch (error) {
-    console.error('Error fetching activity:', error);
-    res.status(500).json({ error: 'Failed to fetch activity' });
+    console.error("Error fetching activity:", error);
+    res.status(500).json({ error: "Failed to fetch activity" });
   }
 });
 
 /**
  * Get activity streams
  */
-app.get('/api/activities/:id/streams', requireAuth, async (req: Request, res: Response) => {
+app.get("/api/activities/:id/streams", requireAuth, async (req: Request, res: Response) => {
   try {
     const activityId = parseInt(req.params.id);
     const streams = await stravaClient.getActivityStreams(activityId);
     res.json(streams);
   } catch (error) {
-    console.error('Error fetching streams:', error);
-    res.status(500).json({ error: 'Failed to fetch streams' });
+    console.error("Error fetching streams:", error);
+    res.status(500).json({ error: "Failed to fetch streams" });
   }
 });
 
 /**
  * Get rate limit info
  */
-app.get('/api/rate-limits', requireAuth, (req: Request, res: Response) => {
+app.get("/api/rate-limits", requireAuth, (req: Request, res: Response) => {
   const rateLimits = stravaClient.getRateLimitInfo();
-  res.json(rateLimits || { message: 'No rate limit data available yet' });
+  res.json(rateLimits || { message: "No rate limit data available yet" });
 });
 
 // ============================================================================
 // Home Page
 // ============================================================================
 
-app.get('/', (req: Request, res: Response) => {
+app.get("/", (req: Request, res: Response) => {
   res.send(`
     <html>
       <head>

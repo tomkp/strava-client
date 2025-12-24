@@ -29,16 +29,19 @@ export class StravaError extends Error {
   public readonly code: string;
   public readonly context?: string;
 
-  constructor(message: string, code: string = 'STRAVA_ERROR', statusCode?: number) {
+  constructor(message: string, code: string = "STRAVA_ERROR", statusCode?: number) {
     super(message);
-    this.name = 'StravaError';
+    this.name = "StravaError";
     this.code = code;
     this.statusCode = statusCode;
     // Capture stack trace if available (V8 engines like Node.js)
     const errorConstructor = Error as typeof Error & {
-      captureStackTrace?: (target: object, constructor: Function) => void;
+      captureStackTrace?: (
+        target: object,
+        constructor: new (...args: unknown[]) => unknown
+      ) => void;
     };
-    if (typeof errorConstructor.captureStackTrace === 'function') {
+    if (typeof errorConstructor.captureStackTrace === "function") {
       errorConstructor.captureStackTrace(this, this.constructor);
     }
   }
@@ -52,8 +55,8 @@ export class StravaError extends Error {
  * Authentication error (401)
  */
 export class StravaAuthenticationError extends StravaError {
-  constructor(message: string = 'Authentication failed') {
-    super(message, 'STRAVA_AUTH_ERROR', 401);
+  constructor(message: string = "Authentication failed") {
+    super(message, "STRAVA_AUTH_ERROR", 401);
   }
 }
 
@@ -61,8 +64,8 @@ export class StravaAuthenticationError extends StravaError {
  * Authorization error (403)
  */
 export class StravaAuthorizationError extends StravaError {
-  constructor(message: string = 'Access denied - insufficient permissions') {
-    super(message, 'STRAVA_AUTHORIZATION_ERROR', 403);
+  constructor(message: string = "Access denied - insufficient permissions") {
+    super(message, "STRAVA_AUTHORIZATION_ERROR", 403);
   }
 }
 
@@ -70,8 +73,8 @@ export class StravaAuthorizationError extends StravaError {
  * Resource not found error (404)
  */
 export class StravaNotFoundError extends StravaError {
-  constructor(message: string = 'Resource not found') {
-    super(message, 'STRAVA_NOT_FOUND', 404);
+  constructor(message: string = "Resource not found") {
+    super(message, "STRAVA_NOT_FOUND", 404);
   }
 }
 
@@ -84,12 +87,12 @@ export class StravaRateLimitError extends StravaError {
   public readonly usage?: string;
 
   constructor(
-    message: string = 'Rate limit exceeded',
+    message: string = "Rate limit exceeded",
     retryAfter?: number,
     limit?: string,
     usage?: string
   ) {
-    super(message, 'STRAVA_RATE_LIMIT', 429);
+    super(message, "STRAVA_RATE_LIMIT", 429);
     this.retryAfter = retryAfter;
     this.limit = limit;
     this.usage = usage;
@@ -100,8 +103,8 @@ export class StravaRateLimitError extends StravaError {
  * Token refresh error
  */
 export class StravaTokenRefreshError extends StravaError {
-  constructor(message: string = 'Failed to refresh access token') {
-    super(message, 'STRAVA_TOKEN_REFRESH_ERROR', 401);
+  constructor(message: string = "Failed to refresh access token") {
+    super(message, "STRAVA_TOKEN_REFRESH_ERROR", 401);
   }
 }
 
@@ -109,8 +112,8 @@ export class StravaTokenRefreshError extends StravaError {
  * Validation error (400)
  */
 export class StravaValidationError extends StravaError {
-  constructor(message: string = 'Invalid request parameters') {
-    super(message, 'STRAVA_VALIDATION_ERROR', 400);
+  constructor(message: string = "Invalid request parameters") {
+    super(message, "STRAVA_VALIDATION_ERROR", 400);
   }
 }
 
@@ -118,8 +121,8 @@ export class StravaValidationError extends StravaError {
  * Network error
  */
 export class StravaNetworkError extends StravaError {
-  constructor(message: string = 'Network request failed') {
-    super(message, 'STRAVA_NETWORK_ERROR');
+  constructor(message: string = "Network request failed") {
+    super(message, "STRAVA_NETWORK_ERROR");
   }
 }
 
@@ -127,8 +130,8 @@ export class StravaNetworkError extends StravaError {
  * API error (5xx)
  */
 export class StravaApiError extends StravaError {
-  constructor(message: string = 'Strava API error', statusCode: number = 500) {
-    super(message, 'STRAVA_API_ERROR', statusCode);
+  constructor(message: string = "Strava API error", statusCode: number = 500) {
+    super(message, "STRAVA_API_ERROR", statusCode);
   }
 }
 
@@ -139,7 +142,9 @@ export class StravaApiError extends StravaError {
 /**
  * Parse error response into appropriate StravaError
  */
-export function parseStravaError(error: StravaErrorResponse | StravaError | Error | unknown): StravaError {
+export function parseStravaError(
+  error: StravaErrorResponse | StravaError | Error | unknown
+): StravaError {
   // Already a StravaError
   if (error instanceof StravaError) {
     return error;
@@ -152,12 +157,12 @@ export function parseStravaError(error: StravaErrorResponse | StravaError | Erro
 
     // Rate limit error
     if (status === 429) {
-      const retryAfterHeader = headers.get('retry-after');
+      const retryAfterHeader = headers.get("retry-after");
       return new StravaRateLimitError(
         message,
         retryAfterHeader ? parseInt(retryAfterHeader) : undefined,
-        headers.get('x-ratelimit-limit') ?? undefined,
-        headers.get('x-ratelimit-usage') ?? undefined
+        headers.get("x-ratelimit-limit") ?? undefined,
+        headers.get("x-ratelimit-usage") ?? undefined
       );
     }
 
@@ -189,18 +194,18 @@ export function parseStravaError(error: StravaErrorResponse | StravaError | Erro
     // Other HTTP errors
     return new StravaError(
       context ? `${context}: ${message}` : message,
-      'STRAVA_HTTP_ERROR',
+      "STRAVA_HTTP_ERROR",
       status
     );
   }
 
   // Standard Error
   if (error instanceof Error) {
-    return new StravaError(error.message, 'STRAVA_ERROR');
+    return new StravaError(error.message, "STRAVA_ERROR");
   }
 
   // Unknown error type
-  return new StravaError(String(error), 'STRAVA_UNKNOWN_ERROR');
+  return new StravaError(String(error), "STRAVA_UNKNOWN_ERROR");
 }
 
 /**
@@ -208,11 +213,11 @@ export function parseStravaError(error: StravaErrorResponse | StravaError | Erro
  */
 function isStravaErrorResponse(error: unknown): error is StravaErrorResponse {
   return (
-    typeof error === 'object' &&
+    typeof error === "object" &&
     error !== null &&
-    'status' in error &&
-    typeof (error as StravaErrorResponse).status === 'number' &&
-    'headers' in error &&
+    "status" in error &&
+    typeof (error as StravaErrorResponse).status === "number" &&
+    "headers" in error &&
     (error as StravaErrorResponse).headers instanceof Headers
   );
 }

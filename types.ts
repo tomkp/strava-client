@@ -36,7 +36,7 @@ export interface StravaAthlete {
   city?: string | null;
   state?: string | null;
   country?: string | null;
-  sex?: 'M' | 'F' | null;
+  sex?: "M" | "F" | null;
   premium?: boolean;
   summit?: boolean;
   created_at?: string;
@@ -261,7 +261,7 @@ export interface StravaClub {
   featured?: boolean;
   verified?: boolean;
   url?: string;
-  membership?: 'member' | 'pending' | null;
+  membership?: "member" | "pending" | null;
   admin?: boolean;
   owner?: boolean;
   description?: string;
@@ -511,22 +511,22 @@ export interface StravaActivityZones {
 // ============================================================================
 
 export type StravaStreamType =
-  | 'time'
-  | 'distance'
-  | 'latlng'
-  | 'altitude'
-  | 'velocity_smooth'
-  | 'heartrate'
-  | 'cadence'
-  | 'watts'
-  | 'temp'
-  | 'moving'
-  | 'grade_smooth';
+  | "time"
+  | "distance"
+  | "latlng"
+  | "altitude"
+  | "velocity_smooth"
+  | "heartrate"
+  | "cadence"
+  | "watts"
+  | "temp"
+  | "moving"
+  | "grade_smooth";
 
 export interface StravaStream {
   type: StravaStreamType;
   data: number[] | [number, number][];
-  series_type: 'time' | 'distance';
+  series_type: "time" | "distance";
   original_size: number;
   resolution: string;
 }
@@ -611,7 +611,7 @@ export interface ExploreSegmentsOptions {
   /** The bounds of the area to search: [south, west, north, east] */
   bounds: [number, number, number, number];
   /** Activity type: 'running' or 'riding' */
-  activity_type?: 'running' | 'riding';
+  activity_type?: "running" | "riding";
   /** Minimum climb category */
   min_cat?: number;
   /** Maximum climb category */
@@ -639,7 +639,7 @@ export interface UploadActivityOptions {
   /** Set to true to mark as commute */
   commute?: boolean;
   /** The format of the file: 'fit', 'fit.gz', 'tcx', 'tcx.gz', 'gpx', 'gpx.gz' */
-  data_type: 'fit' | 'fit.gz' | 'tcx' | 'tcx.gz' | 'gpx' | 'gpx.gz';
+  data_type: "fit" | "fit.gz" | "tcx" | "tcx.gz" | "gpx" | "gpx.gz";
   /** External identifier */
   external_id?: string;
 }

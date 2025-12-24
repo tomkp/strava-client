@@ -6,7 +6,7 @@
  */
 
 // Main client
-export { StravaClient } from './client';
+export { StravaClient } from "./client";
 
 // Type definitions
 export type {
@@ -67,7 +67,7 @@ export type {
   // Config
   StravaRateLimitInfo,
   StravaClientConfig,
-} from './types';
+} from "./types";
 
 // Error classes
 export {
@@ -82,4 +82,4 @@ export {
   StravaApiError,
   parseStravaError,
   isStravaErrorType,
-} from './errors';
+} from "./errors";
