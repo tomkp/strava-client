@@ -812,11 +812,11 @@ export class StravaClient {
     segmentId: number,
     options: GetSegmentEffortsOptions = {}
   ): Promise<StravaSegmentEffort[]> {
-    return this.request<StravaSegmentEffort[]>('GET', `/segments/${segmentId}/all_efforts`, {
+    return this.request<StravaSegmentEffort[]>('GET', '/segment_efforts', {
       params: {
+        segment_id: segmentId,
         start_date_local: options.start_date_local,
         end_date_local: options.end_date_local,
-        page: options.page || 1,
         per_page: options.per_page || 30,
       },
     });
