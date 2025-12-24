@@ -50,6 +50,24 @@ describe("StravaClient", () => {
       expect(client.getTokens()).toBeNull();
     });
 
+    it("should return a copy of tokens to prevent external mutation", () => {
+      const originalTokens = {
+        accessToken: "access-123",
+        refreshToken: "refresh-456",
+        expiresAt: Math.floor(Date.now() / 1000) + 3600,
+      };
+
+      client.setTokens(originalTokens);
+      const retrievedTokens = client.getTokens();
+
+      // Mutate the retrieved tokens
+      retrievedTokens!.accessToken = "mutated-token";
+
+      // Internal tokens should remain unchanged
+      const internalTokens = client.getTokens();
+      expect(internalTokens!.accessToken).toBe("access-123");
+    });
+
     it("should validate tokens correctly", () => {
       // No tokens
       expect(client.hasValidTokens()).toBe(false);

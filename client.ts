@@ -402,10 +402,10 @@ export class StravaClient {
   }
 
   /**
-   * Get current tokens
+   * Get current tokens (returns a copy to prevent external mutation)
    */
   public getTokens(): StravaTokens | null {
-    return this.tokens;
+    return this.tokens ? { ...this.tokens } : null;
   }
 
   /**
