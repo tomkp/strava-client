@@ -58,8 +58,11 @@ const STRAVA_OAUTH_BASE_URL = "https://www.strava.com/oauth";
 const DEFAULT_REFRESH_BUFFER = 600; // 10 minutes
 const DEFAULT_TIMEOUT = 30000; // 30 seconds
 
+type RequiredConfig = Required<Omit<StravaClientConfig, "onRequest" | "onResponse">> &
+  Pick<StravaClientConfig, "onRequest" | "onResponse">;
+
 export class StravaClient {
-  private config: Required<StravaClientConfig>;
+  private config: RequiredConfig;
   private tokens: StravaTokens | null = null;
   private rateLimitInfo: StravaRateLimitInfo | null = null;
   private refreshPromise: Promise<StravaTokenResponse> | null = null;
@@ -73,6 +76,8 @@ export class StravaClient {
       refreshBuffer: config.refreshBuffer ?? DEFAULT_REFRESH_BUFFER,
       timeout: config.timeout ?? DEFAULT_TIMEOUT,
       onTokenRefresh: config.onTokenRefresh ?? (() => {}),
+      onRequest: config.onRequest,
+      onResponse: config.onResponse,
     };
   }
 
@@ -127,47 +132,12 @@ export class StravaClient {
       Object.assign(headers, authHeaders);
     }
 
-    // Setup timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT);
-
-    try {
-      const response = await fetch(url, {
-        method,
-        headers,
-        body: options.body ? JSON.stringify(options.body) : undefined,
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-
-      // Update rate limit info from headers
-      this.updateRateLimitInfo(response.headers);
-
-      // Handle non-OK responses
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw parseStravaError({
-          status: response.status,
-          data: errorData,
-          headers: response.headers,
-        });
-      }
-
-      return (await response.json()) as T;
-    } catch (error) {
-      clearTimeout(timeoutId);
-
-      if (error instanceof Error && error.name === "AbortError") {
-        throw new StravaNetworkError("Request timed out");
-      }
-
-      if (error instanceof TypeError && error.message.includes("fetch")) {
-        throw new StravaNetworkError("Network error - unable to reach Strava");
-      }
-
-      throw error;
-    }
+    return this.fetchWithTimeout<T>(url, {
+      method,
+      headers,
+      body: options.body ? JSON.stringify(options.body) : undefined,
+      parseResponse: (response) => response.json() as Promise<T>,
+    });
   }
 
   /**
@@ -240,6 +210,21 @@ export class StravaClient {
     const controller = new AbortController();
     const timeout = options.timeout ?? this.config.timeout;
     const timeoutId = setTimeout(() => controller.abort(), timeout);
+    const startTime = Date.now();
+
+    // Call onRequest hook if configured
+    if (this.config.onRequest) {
+      const safeHeaders = { ...options.headers };
+      // Mask authorization header for security
+      if (safeHeaders.Authorization) {
+        safeHeaders.Authorization = "Bearer [REDACTED]";
+      }
+      this.config.onRequest({
+        method: options.method,
+        url,
+        headers: safeHeaders,
+      });
+    }
 
     try {
       const response = await fetch(url, {
@@ -250,6 +235,17 @@ export class StravaClient {
       });
 
       clearTimeout(timeoutId);
+      const duration = Date.now() - startTime;
+
+      // Call onResponse hook if configured
+      if (this.config.onResponse) {
+        this.config.onResponse({
+          method: options.method,
+          url,
+          status: response.status,
+          duration,
+        });
+      }
 
       if (!options.skipRateLimit) {
         this.updateRateLimitInfo(response.headers);

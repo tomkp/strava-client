@@ -67,6 +67,9 @@ export type {
   // Config
   StravaRateLimitInfo,
   StravaClientConfig,
+  // Logging
+  StravaRequestInfo,
+  StravaResponseInfo,
 } from "./types";
 
 // Error classes

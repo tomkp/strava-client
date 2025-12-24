@@ -498,6 +498,107 @@ describe("StravaClient", () => {
     });
   });
 
+  describe("Request/Response Logging Hooks", () => {
+    it("should call onRequest hook before each request", async () => {
+      const onRequest = vi.fn();
+      const clientWithHooks = new StravaClient({
+        clientId: "test",
+        clientSecret: "test",
+        onRequest,
+      });
+
+      clientWithHooks.setTokens({
+        accessToken: "valid-token",
+        refreshToken: "refresh",
+        expiresAt: Math.floor(Date.now() / 1000) + 3600,
+      });
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ id: 123 }),
+        headers: new Headers(),
+      });
+
+      await clientWithHooks.getAthlete();
+
+      expect(onRequest).toHaveBeenCalledWith({
+        method: "GET",
+        url: "https://www.strava.com/api/v3/athlete",
+        headers: expect.objectContaining({
+          Authorization: "Bearer [REDACTED]",
+        }),
+      });
+    });
+
+    it("should call onResponse hook after each response", async () => {
+      const onResponse = vi.fn();
+      const clientWithHooks = new StravaClient({
+        clientId: "test",
+        clientSecret: "test",
+        onResponse,
+      });
+
+      clientWithHooks.setTokens({
+        accessToken: "valid-token",
+        refreshToken: "refresh",
+        expiresAt: Math.floor(Date.now() / 1000) + 3600,
+      });
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ id: 123 }),
+        headers: new Headers(),
+      });
+
+      await clientWithHooks.getAthlete();
+
+      expect(onResponse).toHaveBeenCalledWith({
+        method: "GET",
+        url: "https://www.strava.com/api/v3/athlete",
+        status: 200,
+        duration: expect.any(Number),
+      });
+    });
+
+    it("should include duration in response hook", async () => {
+      const onResponse = vi.fn();
+      const clientWithHooks = new StravaClient({
+        clientId: "test",
+        clientSecret: "test",
+        onResponse,
+      });
+
+      clientWithHooks.setTokens({
+        accessToken: "valid-token",
+        refreshToken: "refresh",
+        expiresAt: Math.floor(Date.now() / 1000) + 3600,
+      });
+
+      // Mock a 50ms delay
+      mockFetch.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            setTimeout(
+              () =>
+                resolve({
+                  ok: true,
+                  json: () => Promise.resolve({ id: 123 }),
+                  headers: new Headers(),
+                }),
+              50
+            );
+          })
+      );
+
+      await clientWithHooks.getAthlete();
+
+      expect(onResponse).toHaveBeenCalled();
+      const callArg = onResponse.mock.calls[0][0];
+      expect(callArg.duration).toBeGreaterThanOrEqual(50);
+    });
+  });
+
   describe("Async Iterator Pagination", () => {
     beforeEach(() => {
       client.setTokens({

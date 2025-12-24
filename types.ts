@@ -662,6 +662,30 @@ export interface StravaRateLimitInfo {
 }
 
 // ============================================================================
+// Logging Types
+// ============================================================================
+
+export interface StravaRequestInfo {
+  /** HTTP method */
+  method: string;
+  /** Full URL */
+  url: string;
+  /** Request headers (excluding Authorization value for security) */
+  headers: Record<string, string>;
+}
+
+export interface StravaResponseInfo {
+  /** HTTP method */
+  method: string;
+  /** Full URL */
+  url: string;
+  /** HTTP status code */
+  status: number;
+  /** Response time in milliseconds */
+  duration: number;
+}
+
+// ============================================================================
 // Client Configuration
 // ============================================================================
 
@@ -680,4 +704,8 @@ export interface StravaClientConfig {
   timeout?: number;
   /** Optional callback when tokens are refreshed */
   onTokenRefresh?: (tokens: StravaTokens) => void | Promise<void>;
+  /** Optional callback before each request (for logging/debugging) */
+  onRequest?: (info: StravaRequestInfo) => void;
+  /** Optional callback after each response (for logging/debugging) */
+  onResponse?: (info: StravaResponseInfo) => void;
 }
