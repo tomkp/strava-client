@@ -686,6 +686,66 @@ export interface StravaResponseInfo {
 }
 
 // ============================================================================
+// Webhook Types
+// ============================================================================
+
+/** Webhook subscription details */
+export interface StravaWebhookSubscription {
+  /** Subscription ID */
+  id: number;
+  /** Application ID */
+  application_id: number;
+  /** Callback URL where webhook events are sent */
+  callback_url: string;
+  /** Timestamp when subscription was created */
+  created_at: string;
+  /** Timestamp when subscription was last updated */
+  updated_at: string;
+}
+
+/** Object type in webhook event */
+export type StravaWebhookObjectType = "activity" | "athlete";
+
+/** Aspect type (action) in webhook event */
+export type StravaWebhookAspectType = "create" | "update" | "delete";
+
+/** Webhook event payload from Strava */
+export interface StravaWebhookEvent {
+  /** Type of object affected - "activity" or "athlete" */
+  object_type: StravaWebhookObjectType;
+  /** ID of the affected activity or athlete */
+  object_id: number;
+  /** Type of action - "create", "update", or "delete" */
+  aspect_type: StravaWebhookAspectType;
+  /** Hash of updated fields (only present for updates) */
+  updates: Record<string, string>;
+  /** Athlete's ID who owns the object */
+  owner_id: number;
+  /** Push subscription ID */
+  subscription_id: number;
+  /** Unix timestamp of the event */
+  event_time: number;
+}
+
+/** Webhook verification challenge request from Strava */
+export interface StravaWebhookVerificationRequest {
+  /** Challenge string to echo back */
+  "hub.challenge": string;
+  /** Mode - always "subscribe" */
+  "hub.mode": string;
+  /** Verification token to validate */
+  "hub.verify_token": string;
+}
+
+/** Options for creating a webhook subscription */
+export interface CreateWebhookSubscriptionOptions {
+  /** URL where Strava will send webhook events */
+  callbackUrl: string;
+  /** Token used to verify the callback URL */
+  verifyToken: string;
+}
+
+// ============================================================================
 // Client Configuration
 // ============================================================================
 

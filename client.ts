@@ -45,6 +45,10 @@ import {
   ExploreSegmentsOptions,
   GetSegmentEffortsOptions,
   UploadActivityOptions,
+  StravaWebhookSubscription,
+  StravaWebhookEvent,
+  StravaWebhookVerificationRequest,
+  CreateWebhookSubscriptionOptions,
 } from "./types";
 import {
   parseStravaError,
@@ -1093,5 +1097,119 @@ export class StravaClient {
       tokenExpiresAt: this.tokens ? new Date(this.tokens.expiresAt * 1000) : null,
       rateLimitInfo: this.rateLimitInfo,
     };
+  }
+
+  // ============================================================================
+  // Webhook Endpoints
+  // ============================================================================
+
+  /**
+   * Create a webhook subscription.
+   * Strava will make a GET request to your callback URL to verify it.
+   * Note: Each app can only have one webhook subscription.
+   */
+  public async createWebhookSubscription(
+    options: CreateWebhookSubscriptionOptions
+  ): Promise<StravaWebhookSubscription> {
+    const body = new URLSearchParams({
+      client_id: this.config.clientId,
+      client_secret: this.config.clientSecret,
+      callback_url: options.callbackUrl,
+      verify_token: options.verifyToken,
+    });
+
+    return this.requestRaw<StravaWebhookSubscription>("POST", `${STRAVA_API_BASE_URL}/push_subscriptions`, {
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: body.toString(),
+      skipRateLimit: true,
+    });
+  }
+
+  /**
+   * Get the current webhook subscription for this application.
+   * Returns the subscription or null if none exists.
+   */
+  public async getWebhookSubscription(): Promise<StravaWebhookSubscription | null> {
+    const params = new URLSearchParams({
+      client_id: this.config.clientId,
+      client_secret: this.config.clientSecret,
+    });
+
+    const subscriptions = await this.requestRaw<StravaWebhookSubscription[]>(
+      "GET",
+      `${STRAVA_API_BASE_URL}/push_subscriptions?${params.toString()}`,
+      {
+        skipRateLimit: true,
+      }
+    );
+
+    return subscriptions.length > 0 ? subscriptions[0] : null;
+  }
+
+  /**
+   * Delete a webhook subscription by ID.
+   */
+  public async deleteWebhookSubscription(subscriptionId: number): Promise<void> {
+    const body = new URLSearchParams({
+      client_id: this.config.clientId,
+      client_secret: this.config.clientSecret,
+    });
+
+    await this.fetchWithTimeout(
+      `${STRAVA_API_BASE_URL}/push_subscriptions/${subscriptionId}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "X-HTTP-Method-Override": "DELETE",
+        },
+        body: body.toString(),
+        parseResponse: async () => undefined,
+        skipRateLimit: true,
+      }
+    );
+  }
+
+  /**
+   * Validate a webhook verification request from Strava.
+   * Call this when you receive a GET request to your callback URL.
+   *
+   * @returns The challenge string to echo back if valid, or null if invalid
+   */
+  public validateWebhookVerification(
+    request: StravaWebhookVerificationRequest,
+    expectedVerifyToken: string
+  ): string | null {
+    if (
+      request["hub.mode"] === "subscribe" &&
+      request["hub.verify_token"] === expectedVerifyToken
+    ) {
+      return request["hub.challenge"];
+    }
+    return null;
+  }
+
+  /**
+   * Parse a webhook event payload.
+   * Use this to safely parse the JSON body from webhook POST requests.
+   */
+  public parseWebhookEvent(payload: unknown): StravaWebhookEvent {
+    const event = payload as StravaWebhookEvent;
+
+    // Basic validation
+    if (
+      typeof event.object_type !== "string" ||
+      typeof event.object_id !== "number" ||
+      typeof event.aspect_type !== "string" ||
+      typeof event.owner_id !== "number" ||
+      typeof event.subscription_id !== "number" ||
+      typeof event.event_time !== "number"
+    ) {
+      throw new StravaValidationError("Invalid webhook event payload");
+    }
+
+    return event;
   }
 }
