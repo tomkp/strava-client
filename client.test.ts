@@ -219,6 +219,40 @@ describe("StravaClient", () => {
 
       await expect(client.getAthlete()).rejects.toThrow(StravaNetworkError);
     });
+
+    it("should use custom timeout from config", async () => {
+      const customTimeoutClient = new StravaClient({
+        clientId: "test",
+        clientSecret: "test",
+        timeout: 5000, // 5 seconds
+      });
+
+      customTimeoutClient.setTokens({
+        accessToken: "valid-token",
+        refreshToken: "refresh-token",
+        expiresAt: Math.floor(Date.now() / 1000) + 3600,
+      });
+
+      // Mock a slow response that takes 10ms
+      mockFetch.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            setTimeout(
+              () =>
+                resolve({
+                  ok: true,
+                  json: () => Promise.resolve({ id: 123 }),
+                  headers: new Headers(),
+                }),
+              10
+            );
+          })
+      );
+
+      // Should succeed with 5000ms timeout
+      const result = await customTimeoutClient.getAthlete();
+      expect(result).toEqual({ id: 123 });
+    });
   });
 
   describe("Rate Limit Tracking", () => {

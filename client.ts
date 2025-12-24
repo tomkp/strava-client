@@ -71,6 +71,7 @@ export class StravaClient {
       redirectUri: config.redirectUri || "",
       autoRefresh: config.autoRefresh ?? true,
       refreshBuffer: config.refreshBuffer ?? DEFAULT_REFRESH_BUFFER,
+      timeout: config.timeout ?? DEFAULT_TIMEOUT,
       onTokenRefresh: config.onTokenRefresh ?? (() => {}),
     };
   }
@@ -233,10 +234,12 @@ export class StravaClient {
       parseResponse: (response: Response) => Promise<T>;
       context?: string;
       skipRateLimit?: boolean;
+      timeout?: number;
     }
   ): Promise<T> {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT);
+    const timeout = options.timeout ?? this.config.timeout;
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
 
     try {
       const response = await fetch(url, {
