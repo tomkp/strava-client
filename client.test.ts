@@ -905,12 +905,12 @@ describe("StravaClient", () => {
       expect(challenge).toBeNull();
     });
 
-    it("should parse valid webhook event", () => {
+    it("should parse valid webhook event with updates", () => {
       const payload = {
         object_type: "activity",
         object_id: 12345678,
-        aspect_type: "create",
-        updates: {},
+        aspect_type: "update",
+        updates: { title: "Morning Run" },
         owner_id: 123456,
         subscription_id: 789,
         event_time: 1704067200,
@@ -918,6 +918,21 @@ describe("StravaClient", () => {
 
       const event = client.parseWebhookEvent(payload);
       expect(event).toEqual(payload);
+    });
+
+    it("should parse webhook event without updates field (create/delete events)", () => {
+      const payload = {
+        object_type: "activity",
+        object_id: 12345678,
+        aspect_type: "create",
+        owner_id: 123456,
+        subscription_id: 789,
+        event_time: 1704067200,
+      };
+
+      const event = client.parseWebhookEvent(payload);
+      expect(event).toEqual(payload);
+      expect(event.updates).toBeUndefined();
     });
 
     it("should throw on invalid webhook event", () => {

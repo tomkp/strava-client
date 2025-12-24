@@ -723,8 +723,8 @@ export interface StravaWebhookEvent {
   object_id: number;
   /** Type of action - "create", "update", or "delete" */
   aspect_type: StravaWebhookAspectType;
-  /** Hash of updated fields (only present for updates) */
-  updates: Record<string, string>;
+  /** Hash of updated fields (only present for update events) */
+  updates?: Record<string, string>;
   /** Athlete's ID who owns the object */
   owner_id: number;
   /** Push subscription ID */
