@@ -450,6 +450,33 @@ describe("StravaClient", () => {
         expiresAt: tokenResponse.expires_at,
       });
     });
+
+    it("should deauthorize and clear tokens", async () => {
+      client.setTokens({
+        accessToken: "access-token",
+        refreshToken: "refresh-token",
+        expiresAt: Math.floor(Date.now() / 1000) + 3600,
+      });
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({}),
+        headers: new Headers(),
+      });
+
+      await client.deauthorize();
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        "https://www.strava.com/oauth/deauthorize",
+        expect.objectContaining({
+          method: "POST",
+          headers: expect.objectContaining({
+            Authorization: "Bearer access-token",
+          }),
+        })
+      );
+      expect(client.getTokens()).toBeNull();
+    });
   });
 
   describe("Client Info", () => {
@@ -802,6 +829,108 @@ describe("StravaClient", () => {
       const members = await client.getAllClubMembers(12345);
       expect(members).toHaveLength(0);
       expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("Upload and Export", () => {
+    beforeEach(() => {
+      client.setTokens({
+        accessToken: "test-access-token",
+        refreshToken: "test-refresh-token",
+        expiresAt: Math.floor(Date.now() / 1000) + 3600,
+      });
+    });
+
+    it("should upload an activity file", async () => {
+      const uploadResponse = {
+        id: 123456,
+        external_id: "garmin-activity-123",
+        status: "processing",
+        activity_id: null,
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(uploadResponse),
+        headers: new Headers(),
+      });
+
+      const file = new Blob(["<gpx></gpx>"], { type: "application/gpx+xml" });
+      const result = await client.uploadActivity({
+        file,
+        data_type: "gpx",
+        name: "My Run",
+      });
+
+      expect(result).toEqual(uploadResponse);
+      expect(mockFetch).toHaveBeenCalledWith(
+        "https://www.strava.com/api/v3/uploads",
+        expect.objectContaining({
+          method: "POST",
+          headers: expect.objectContaining({
+            Authorization: "Bearer test-access-token",
+          }),
+        })
+      );
+    });
+
+    it("should get upload status", async () => {
+      const uploadResponse = {
+        id: 123456,
+        external_id: "garmin-activity-123",
+        status: "Your activity is ready.",
+        activity_id: 789012,
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(uploadResponse),
+        headers: new Headers(),
+      });
+
+      const result = await client.getUpload(123456);
+
+      expect(result).toEqual(uploadResponse);
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining("/uploads/123456"),
+        expect.any(Object)
+      );
+    });
+
+    it("should export route as GPX", async () => {
+      const gpxContent = '<?xml version="1.0"?><gpx></gpx>';
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: () => Promise.resolve(gpxContent),
+        headers: new Headers(),
+      });
+
+      const result = await client.exportRouteGPX(123);
+
+      expect(result).toBe(gpxContent);
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining("/routes/123/export_gpx"),
+        expect.any(Object)
+      );
+    });
+
+    it("should export route as TCX", async () => {
+      const tcxContent = '<?xml version="1.0"?><tcx></tcx>';
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: () => Promise.resolve(tcxContent),
+        headers: new Headers(),
+      });
+
+      const result = await client.exportRouteTCX(456);
+
+      expect(result).toBe(tcxContent);
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining("/routes/456/export_tcx"),
+        expect.any(Object)
+      );
     });
   });
 
