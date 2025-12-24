@@ -70,6 +70,13 @@ export type {
   // Logging
   StravaRequestInfo,
   StravaResponseInfo,
+  // Webhooks
+  StravaWebhookSubscription,
+  StravaWebhookObjectType,
+  StravaWebhookAspectType,
+  StravaWebhookEvent,
+  StravaWebhookVerificationRequest,
+  CreateWebhookSubscriptionOptions,
 } from "./types";
 
 // Error classes

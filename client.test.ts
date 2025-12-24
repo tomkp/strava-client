@@ -788,4 +788,149 @@ describe("StravaClient", () => {
       expect(mockFetch).toHaveBeenCalledTimes(1);
     });
   });
+
+  describe("Webhook Support", () => {
+    it("should create a webhook subscription", async () => {
+      const subscriptionResponse = {
+        id: 123456,
+        application_id: 12345,
+        callback_url: "https://example.com/webhook",
+        created_at: "2024-01-01T00:00:00Z",
+        updated_at: "2024-01-01T00:00:00Z",
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(subscriptionResponse),
+        headers: new Headers(),
+      });
+
+      const subscription = await client.createWebhookSubscription({
+        callbackUrl: "https://example.com/webhook",
+        verifyToken: "my-secret-token",
+      });
+
+      expect(subscription).toEqual(subscriptionResponse);
+      expect(mockFetch).toHaveBeenCalledWith(
+        "https://www.strava.com/api/v3/push_subscriptions",
+        expect.objectContaining({
+          method: "POST",
+          headers: expect.objectContaining({
+            "Content-Type": "application/x-www-form-urlencoded",
+          }),
+        })
+      );
+    });
+
+    it("should get webhook subscription", async () => {
+      const subscriptionResponse = [
+        {
+          id: 123456,
+          application_id: 12345,
+          callback_url: "https://example.com/webhook",
+          created_at: "2024-01-01T00:00:00Z",
+          updated_at: "2024-01-01T00:00:00Z",
+        },
+      ];
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(subscriptionResponse),
+        headers: new Headers(),
+      });
+
+      const subscription = await client.getWebhookSubscription();
+
+      expect(subscription).toEqual(subscriptionResponse[0]);
+    });
+
+    it("should return null when no webhook subscription exists", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve([]),
+        headers: new Headers(),
+      });
+
+      const subscription = await client.getWebhookSubscription();
+
+      expect(subscription).toBeNull();
+    });
+
+    it("should delete webhook subscription", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(undefined),
+        headers: new Headers(),
+      });
+
+      await client.deleteWebhookSubscription(123456);
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        "https://www.strava.com/api/v3/push_subscriptions/123456",
+        expect.objectContaining({
+          method: "POST",
+          headers: expect.objectContaining({
+            "X-HTTP-Method-Override": "DELETE",
+          }),
+        })
+      );
+    });
+
+    it("should validate webhook verification request", () => {
+      const validRequest = {
+        "hub.mode": "subscribe",
+        "hub.verify_token": "my-secret-token",
+        "hub.challenge": "abc123",
+      };
+
+      const challenge = client.validateWebhookVerification(validRequest, "my-secret-token");
+      expect(challenge).toBe("abc123");
+    });
+
+    it("should reject invalid verify token", () => {
+      const invalidRequest = {
+        "hub.mode": "subscribe",
+        "hub.verify_token": "wrong-token",
+        "hub.challenge": "abc123",
+      };
+
+      const challenge = client.validateWebhookVerification(invalidRequest, "my-secret-token");
+      expect(challenge).toBeNull();
+    });
+
+    it("should reject invalid hub mode", () => {
+      const invalidRequest = {
+        "hub.mode": "unsubscribe",
+        "hub.verify_token": "my-secret-token",
+        "hub.challenge": "abc123",
+      };
+
+      const challenge = client.validateWebhookVerification(invalidRequest, "my-secret-token");
+      expect(challenge).toBeNull();
+    });
+
+    it("should parse valid webhook event", () => {
+      const payload = {
+        object_type: "activity",
+        object_id: 12345678,
+        aspect_type: "create",
+        updates: {},
+        owner_id: 123456,
+        subscription_id: 789,
+        event_time: 1704067200,
+      };
+
+      const event = client.parseWebhookEvent(payload);
+      expect(event).toEqual(payload);
+    });
+
+    it("should throw on invalid webhook event", () => {
+      const invalidPayload = {
+        object_type: "activity",
+        // missing other fields
+      };
+
+      expect(() => client.parseWebhookEvent(invalidPayload)).toThrow("Invalid webhook event payload");
+    });
+  });
 });
