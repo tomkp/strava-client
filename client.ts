@@ -62,6 +62,7 @@ export class StravaClient {
   private config: Required<StravaClientConfig>;
   private tokens: StravaTokens | null = null;
   private rateLimitInfo: StravaRateLimitInfo | null = null;
+  private refreshPromise: Promise<StravaTokenResponse> | null = null;
 
   constructor(config: StravaClientConfig) {
     this.config = {
@@ -381,7 +382,8 @@ export class StravaClient {
   }
 
   /**
-   * Automatically refresh token if it's expired or expiring soon
+   * Automatically refresh token if it's expired or expiring soon.
+   * Uses a mutex pattern to prevent multiple concurrent refresh requests.
    */
   private async refreshTokenIfNeeded(): Promise<void> {
     if (!this.tokens) return;
@@ -390,7 +392,19 @@ export class StravaClient {
     const shouldRefresh = this.tokens.expiresAt < now + this.config.refreshBuffer;
 
     if (shouldRefresh) {
-      await this.refreshAccessToken();
+      // If a refresh is already in progress, wait for it
+      if (this.refreshPromise) {
+        await this.refreshPromise;
+        return;
+      }
+
+      // Start a new refresh and store the promise
+      this.refreshPromise = this.refreshAccessToken();
+      try {
+        await this.refreshPromise;
+      } finally {
+        this.refreshPromise = null;
+      }
     }
   }
 
