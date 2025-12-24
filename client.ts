@@ -45,6 +45,7 @@ import {
   ExploreSegmentsOptions,
   GetSegmentEffortsOptions,
   UploadActivityOptions,
+  RequestOptions,
   StravaWebhookSubscription,
   StravaWebhookEvent,
   StravaWebhookVerificationRequest,
@@ -155,6 +156,7 @@ export class StravaClient {
     options: {
       baseUrl?: string;
       headers?: Record<string, string>;
+      signal?: AbortSignal;
     } = {}
   ): Promise<string> {
     if (this.config.autoRefresh && this.tokens) {
@@ -171,6 +173,7 @@ export class StravaClient {
         ...options.headers,
       },
       parseResponse: (response) => response.text(),
+      signal: options.signal,
     });
   }
 
@@ -912,15 +915,19 @@ export class StravaClient {
   /**
    * Export route as GPX
    */
-  public async exportRouteGPX(routeId: number): Promise<string> {
-    return this.requestText("GET", `/routes/${routeId}/export_gpx`);
+  public async exportRouteGPX(routeId: number, options: RequestOptions = {}): Promise<string> {
+    return this.requestText("GET", `/routes/${routeId}/export_gpx`, {
+      signal: options.signal,
+    });
   }
 
   /**
    * Export route as TCX
    */
-  public async exportRouteTCX(routeId: number): Promise<string> {
-    return this.requestText("GET", `/routes/${routeId}/export_tcx`);
+  public async exportRouteTCX(routeId: number, options: RequestOptions = {}): Promise<string> {
+    return this.requestText("GET", `/routes/${routeId}/export_tcx`, {
+      signal: options.signal,
+    });
   }
 
   /**

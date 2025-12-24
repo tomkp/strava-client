@@ -1075,5 +1075,25 @@ describe("StravaClient", () => {
         })
       );
     });
+
+    it("should support signal for text exports (GPX/TCX)", async () => {
+      const controller = new AbortController();
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: () => Promise.resolve("<gpx></gpx>"),
+        headers: new Headers(),
+      });
+
+      await client.exportRouteGPX(123, { signal: controller.signal });
+
+      // Verify fetch was called with signal
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining("/routes/123/export_gpx"),
+        expect.objectContaining({
+          signal: expect.any(AbortSignal),
+        })
+      );
+    });
   });
 });
