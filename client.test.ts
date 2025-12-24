@@ -497,4 +497,78 @@ describe("StravaClient", () => {
       expect(result).toBe(false);
     });
   });
+
+  describe("Async Iterator Pagination", () => {
+    beforeEach(() => {
+      client.setTokens({
+        accessToken: "valid-token",
+        refreshToken: "refresh-token",
+        expiresAt: Math.floor(Date.now() / 1000) + 3600,
+      });
+    });
+
+    it("should iterate over activities one at a time", async () => {
+      // First page returns 2 activities, second page returns 1, third page empty
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () =>
+            Promise.resolve([
+              { id: 1, name: "Activity 1" },
+              { id: 2, name: "Activity 2" },
+            ]),
+          headers: new Headers(),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve([{ id: 3, name: "Activity 3" }]),
+          headers: new Headers(),
+        });
+
+      const activities: { id: number; name: string }[] = [];
+      for await (const activity of client.iterateActivities({ per_page: 2 })) {
+        activities.push(activity as { id: number; name: string });
+      }
+
+      expect(activities).toHaveLength(3);
+      expect(activities[0].id).toBe(1);
+      expect(activities[2].id).toBe(3);
+    });
+
+    it("should allow early termination with break", async () => {
+      // Return 5 activities per page
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve([{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }, { id: 5 }]),
+        headers: new Headers(),
+      });
+
+      const activities: { id: number }[] = [];
+      for await (const activity of client.iterateActivities({ per_page: 5 })) {
+        activities.push(activity as { id: number });
+        if (activities.length >= 2) break; // Stop after 2
+      }
+
+      expect(activities).toHaveLength(2);
+      // Should only have made 1 API call since we broke early
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it("should work with getAllActivities", async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve([{ id: 1 }, { id: 2 }]),
+          headers: new Headers(),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve([]),
+          headers: new Headers(),
+        });
+
+      const activities = await client.getAllActivities({ per_page: 2 });
+      expect(activities).toHaveLength(2);
+    });
+  });
 });

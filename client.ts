@@ -544,9 +544,28 @@ export class StravaClient {
   public async getAllActivities(
     options: Omit<GetActivitiesOptions, "page"> = {}
   ): Promise<StravaActivity[]> {
-    const perPage = options.per_page || 200; // Max per page
+    const allActivities: StravaActivity[] = [];
+    for await (const activity of this.iterateActivities(options)) {
+      allActivities.push(activity);
+    }
+    return allActivities;
+  }
+
+  /**
+   * Iterate over athlete activities using async generator.
+   * Memory-efficient alternative to getAllActivities that yields activities one at a time.
+   *
+   * @example
+   * for await (const activity of client.iterateActivities()) {
+   *   console.log(activity.name);
+   *   if (someCondition) break; // Stop fetching more pages
+   * }
+   */
+  public async *iterateActivities(
+    options: Omit<GetActivitiesOptions, "page"> = {}
+  ): AsyncGenerator<StravaActivity, void, undefined> {
+    const perPage = options.per_page || 200;
     let page = 1;
-    let allActivities: StravaActivity[] = [];
     let hasMore = true;
 
     while (hasMore) {
@@ -559,17 +578,16 @@ export class StravaClient {
       if (activities.length === 0) {
         hasMore = false;
       } else {
-        allActivities = [...allActivities, ...activities];
+        for (const activity of activities) {
+          yield activity;
+        }
         page++;
 
-        // Stop if we got fewer results than requested
         if (activities.length < perPage) {
           hasMore = false;
         }
       }
     }
-
-    return allActivities;
   }
 
   /**
