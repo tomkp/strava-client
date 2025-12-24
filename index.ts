@@ -55,6 +55,7 @@ export type {
   // Uploads
   StravaUpload,
   // Options
+  RequestOptions,
   GetActivitiesOptions,
   GetActivityStreamsOptions,
   CreateActivityOptions,

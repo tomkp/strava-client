@@ -539,7 +539,13 @@ export type StravaStreams = {
 // Request Options
 // ============================================================================
 
-export interface GetActivitiesOptions {
+/** Base options for all requests */
+export interface RequestOptions {
+  /** Optional AbortSignal to cancel the request */
+  signal?: AbortSignal;
+}
+
+export interface GetActivitiesOptions extends RequestOptions {
   /** Epoch timestamp to filter activities that occurred before */
   before?: number;
   /** Epoch timestamp to filter activities that occurred after */
@@ -550,14 +556,14 @@ export interface GetActivitiesOptions {
   per_page?: number;
 }
 
-export interface GetActivityStreamsOptions {
+export interface GetActivityStreamsOptions extends RequestOptions {
   /** List of stream types to retrieve */
   keys?: StravaStreamType[];
   /** Whether to return streams keyed by type (default: true) */
   key_by_type?: boolean;
 }
 
-export interface CreateActivityOptions {
+export interface CreateActivityOptions extends RequestOptions {
   /** The name of the activity */
   name: string;
   /** Type of activity (e.g., 'Run', 'Ride', 'Swim') */
@@ -578,7 +584,7 @@ export interface CreateActivityOptions {
   commute?: boolean;
 }
 
-export interface UpdateActivityOptions {
+export interface UpdateActivityOptions extends RequestOptions {
   /** The name of the activity */
   name?: string;
   /** Type of activity (e.g., 'Run', 'Ride', 'Swim') */
@@ -595,19 +601,19 @@ export interface UpdateActivityOptions {
   hide_from_home?: boolean;
 }
 
-export interface UpdateAthleteOptions {
+export interface UpdateAthleteOptions extends RequestOptions {
   /** The weight of the athlete in kilograms */
   weight?: number;
 }
 
-export interface PaginationOptions {
+export interface PaginationOptions extends RequestOptions {
   /** Page number (default: 1) */
   page?: number;
   /** Number of items per page (default: 30, max: 200) */
   per_page?: number;
 }
 
-export interface ExploreSegmentsOptions {
+export interface ExploreSegmentsOptions extends RequestOptions {
   /** The bounds of the area to search: [south, west, north, east] */
   bounds: [number, number, number, number];
   /** Activity type: 'running' or 'riding' */
@@ -618,7 +624,7 @@ export interface ExploreSegmentsOptions {
   max_cat?: number;
 }
 
-export interface GetSegmentEffortsOptions {
+export interface GetSegmentEffortsOptions extends RequestOptions {
   /** ISO 8601 formatted date time */
   start_date_local?: string;
   /** ISO 8601 formatted date time */
@@ -627,7 +633,7 @@ export interface GetSegmentEffortsOptions {
   per_page?: number;
 }
 
-export interface UploadActivityOptions {
+export interface UploadActivityOptions extends RequestOptions {
   /** The file to upload */
   file: Blob | Buffer;
   /** The name of the file */
