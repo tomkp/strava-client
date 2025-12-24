@@ -169,6 +169,115 @@ export class StravaClient {
     }
   }
 
+  /**
+   * Make an authenticated request that returns text (for XML exports)
+   */
+  private async requestText(
+    method: "GET" | "POST",
+    path: string,
+    options: {
+      baseUrl?: string;
+      headers?: Record<string, string>;
+    } = {}
+  ): Promise<string> {
+    if (this.config.autoRefresh && this.tokens) {
+      await this.refreshTokenIfNeeded();
+    }
+
+    const baseUrl = options.baseUrl ?? STRAVA_API_BASE_URL;
+    const url = `${baseUrl}${path}`;
+
+    return this.fetchWithTimeout(url, {
+      method,
+      headers: {
+        ...this.getAuthHeaders(),
+        ...options.headers,
+      },
+      parseResponse: (response) => response.text(),
+    });
+  }
+
+  /**
+   * Make a request with custom body (for FormData uploads, OAuth requests)
+   */
+  private async requestRaw<T>(
+    method: "GET" | "POST",
+    url: string,
+    options: {
+      headers?: Record<string, string>;
+      body?: string | FormData;
+      parseResponse?: (response: Response) => Promise<T>;
+      context?: string;
+      skipRateLimit?: boolean;
+    } = {}
+  ): Promise<T> {
+    return this.fetchWithTimeout(url, {
+      method,
+      headers: options.headers,
+      body: options.body,
+      parseResponse: options.parseResponse ?? ((r) => r.json() as Promise<T>),
+      context: options.context,
+      skipRateLimit: options.skipRateLimit,
+    });
+  }
+
+  /**
+   * Core fetch wrapper with timeout, error handling, and rate limit tracking
+   */
+  private async fetchWithTimeout<T>(
+    url: string,
+    options: {
+      method: "GET" | "POST" | "PUT";
+      headers?: Record<string, string>;
+      body?: string | FormData;
+      parseResponse: (response: Response) => Promise<T>;
+      context?: string;
+      skipRateLimit?: boolean;
+    }
+  ): Promise<T> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT);
+
+    try {
+      const response = await fetch(url, {
+        method: options.method,
+        headers: options.headers,
+        body: options.body,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!options.skipRateLimit) {
+        this.updateRateLimitInfo(response.headers);
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw parseStravaError({
+          status: response.status,
+          data: errorData,
+          headers: response.headers,
+          context: options.context,
+        });
+      }
+
+      return await options.parseResponse(response);
+    } catch (error) {
+      clearTimeout(timeoutId);
+
+      if (error instanceof Error && error.name === "AbortError") {
+        throw new StravaNetworkError("Request timed out");
+      }
+
+      if (error instanceof TypeError && error.message.includes("fetch")) {
+        throw new StravaNetworkError("Network error - unable to reach Strava");
+      }
+
+      throw error;
+    }
+  }
+
   private getAuthHeaders(): Record<string, string> {
     if (!this.tokens?.accessToken) {
       throw new StravaValidationError("No access token available. Please authenticate first.");
@@ -270,12 +379,10 @@ export class StravaClient {
    * Exchange authorization code for tokens
    */
   public async exchangeAuthorizationCode(code: string): Promise<StravaTokenResponse> {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT);
-
-    try {
-      const response = await fetch(`${STRAVA_OAUTH_BASE_URL}/token`, {
-        method: "POST",
+    const data = await this.requestRaw<StravaTokenResponse>(
+      "POST",
+      `${STRAVA_OAUTH_BASE_URL}/token`,
+      {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           client_id: this.config.clientId,
@@ -283,40 +390,19 @@ export class StravaClient {
           code,
           grant_type: "authorization_code",
         }),
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw parseStravaError({
-          status: response.status,
-          data: errorData,
-          headers: response.headers,
-          context: "Exchange Authorization Code",
-        });
+        context: "Exchange Authorization Code",
+        skipRateLimit: true,
       }
+    );
 
-      const data = (await response.json()) as StravaTokenResponse;
+    // Store tokens
+    this.tokens = {
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token,
+      expiresAt: data.expires_at,
+    };
 
-      // Store tokens
-      this.tokens = {
-        accessToken: data.access_token,
-        refreshToken: data.refresh_token,
-        expiresAt: data.expires_at,
-      };
-
-      return data;
-    } catch (error) {
-      clearTimeout(timeoutId);
-
-      if (error instanceof Error && error.name === "AbortError") {
-        throw new StravaNetworkError("Request timed out");
-      }
-
-      throw error;
-    }
+    return data;
   }
 
   /**
@@ -329,12 +415,10 @@ export class StravaClient {
       throw new StravaTokenRefreshError("No refresh token available");
     }
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT);
-
-    try {
-      const response = await fetch(`${STRAVA_OAUTH_BASE_URL}/token`, {
-        method: "POST",
+    const data = await this.requestRaw<StravaTokenResponse>(
+      "POST",
+      `${STRAVA_OAUTH_BASE_URL}/token`,
+      {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           client_id: this.config.clientId,
@@ -342,43 +426,22 @@ export class StravaClient {
           grant_type: "refresh_token",
           refresh_token: tokenToRefresh,
         }),
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw parseStravaError({
-          status: response.status,
-          data: errorData,
-          headers: response.headers,
-          context: "Refresh Access Token",
-        });
+        context: "Refresh Access Token",
+        skipRateLimit: true,
       }
+    );
 
-      const data = (await response.json()) as StravaTokenResponse;
+    // Update stored tokens
+    this.tokens = {
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token,
+      expiresAt: data.expires_at,
+    };
 
-      // Update stored tokens
-      this.tokens = {
-        accessToken: data.access_token,
-        refreshToken: data.refresh_token,
-        expiresAt: data.expires_at,
-      };
+    // Call onTokenRefresh callback
+    await this.config.onTokenRefresh(this.tokens);
 
-      // Call onTokenRefresh callback
-      await this.config.onTokenRefresh(this.tokens);
-
-      return data;
-    } catch (error) {
-      clearTimeout(timeoutId);
-
-      if (error instanceof Error && error.name === "AbortError") {
-        throw new StravaNetworkError("Request timed out");
-      }
-
-      throw error;
-    }
+    return data;
   }
 
   /**
@@ -412,43 +475,17 @@ export class StravaClient {
    * Deauthorize the application (revoke access)
    */
   public async deauthorize(): Promise<void> {
-    // Deauthorize uses the OAuth base URL, not the API base URL
     if (this.config.autoRefresh && this.tokens) {
       await this.refreshTokenIfNeeded();
     }
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT);
+    await this.requestRaw<unknown>("POST", `${STRAVA_OAUTH_BASE_URL}/deauthorize`, {
+      headers: this.getAuthHeaders(),
+      context: "Deauthorize",
+      skipRateLimit: true,
+    });
 
-    try {
-      const response = await fetch(`${STRAVA_OAUTH_BASE_URL}/deauthorize`, {
-        method: "POST",
-        headers: this.getAuthHeaders(),
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw parseStravaError({
-          status: response.status,
-          data: errorData,
-          headers: response.headers,
-          context: "Deauthorize",
-        });
-      }
-
-      this.clearTokens();
-    } catch (error) {
-      clearTimeout(timeoutId);
-
-      if (error instanceof Error && error.name === "AbortError") {
-        throw new StravaNetworkError("Request timed out");
-      }
-
-      throw error;
-    }
+    this.clearTokens();
   }
 
   // ============================================================================
@@ -769,86 +806,14 @@ export class StravaClient {
    * Export route as GPX
    */
   public async exportRouteGPX(routeId: number): Promise<string> {
-    // GPX export returns XML, not JSON
-    if (this.config.autoRefresh && this.tokens) {
-      await this.refreshTokenIfNeeded();
-    }
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT);
-
-    try {
-      const response = await fetch(`${STRAVA_API_BASE_URL}/routes/${routeId}/export_gpx`, {
-        method: "GET",
-        headers: this.getAuthHeaders(),
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-      this.updateRateLimitInfo(response.headers);
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw parseStravaError({
-          status: response.status,
-          data: errorData,
-          headers: response.headers,
-        });
-      }
-
-      return await response.text();
-    } catch (error) {
-      clearTimeout(timeoutId);
-
-      if (error instanceof Error && error.name === "AbortError") {
-        throw new StravaNetworkError("Request timed out");
-      }
-
-      throw error;
-    }
+    return this.requestText("GET", `/routes/${routeId}/export_gpx`);
   }
 
   /**
    * Export route as TCX
    */
   public async exportRouteTCX(routeId: number): Promise<string> {
-    // TCX export returns XML, not JSON
-    if (this.config.autoRefresh && this.tokens) {
-      await this.refreshTokenIfNeeded();
-    }
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT);
-
-    try {
-      const response = await fetch(`${STRAVA_API_BASE_URL}/routes/${routeId}/export_tcx`, {
-        method: "GET",
-        headers: this.getAuthHeaders(),
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-      this.updateRateLimitInfo(response.headers);
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw parseStravaError({
-          status: response.status,
-          data: errorData,
-          headers: response.headers,
-        });
-      }
-
-      return await response.text();
-    } catch (error) {
-      clearTimeout(timeoutId);
-
-      if (error instanceof Error && error.name === "AbortError") {
-        throw new StravaNetworkError("Request timed out");
-      }
-
-      throw error;
-    }
+    return this.requestText("GET", `/routes/${routeId}/export_tcx`);
   }
 
   /**
@@ -973,7 +938,6 @@ export class StravaClient {
    * Upload an activity file
    */
   public async uploadActivity(options: UploadActivityOptions): Promise<StravaUpload> {
-    // For file uploads, we need to use FormData
     const formData = new FormData();
     formData.append("file", options.file as Blob);
     formData.append("data_type", options.data_type);
@@ -984,44 +948,14 @@ export class StravaClient {
     if (options.commute !== undefined) formData.append("commute", String(options.commute));
     if (options.external_id) formData.append("external_id", options.external_id);
 
-    // Auto-refresh token if needed
     if (this.config.autoRefresh && this.tokens) {
       await this.refreshTokenIfNeeded();
     }
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT);
-
-    try {
-      const response = await fetch(`${STRAVA_API_BASE_URL}/uploads`, {
-        method: "POST",
-        headers: this.getAuthHeaders(),
-        body: formData,
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-      this.updateRateLimitInfo(response.headers);
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw parseStravaError({
-          status: response.status,
-          data: errorData,
-          headers: response.headers,
-        });
-      }
-
-      return (await response.json()) as StravaUpload;
-    } catch (error) {
-      clearTimeout(timeoutId);
-
-      if (error instanceof Error && error.name === "AbortError") {
-        throw new StravaNetworkError("Request timed out");
-      }
-
-      throw error;
-    }
+    return this.requestRaw<StravaUpload>("POST", `${STRAVA_API_BASE_URL}/uploads`, {
+      headers: this.getAuthHeaders(),
+      body: formData,
+    });
   }
 
   /**
