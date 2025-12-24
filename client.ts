@@ -83,12 +83,12 @@ export class StravaClient {
   /**
    * Make an authenticated request to the Strava API
    */
-  private async request<T>(
+  private async request<T, B extends object = Record<string, unknown>>(
     method: "GET" | "POST" | "PUT",
     path: string,
     options: {
       params?: Record<string, string | number | boolean | undefined>;
-      body?: Record<string, unknown>;
+      body?: B;
       headers?: Record<string, string>;
       baseUrl?: string;
       skipAuth?: boolean;
@@ -633,8 +633,8 @@ export class StravaClient {
    * Create a manual activity
    */
   public async createActivity(options: CreateActivityOptions): Promise<StravaActivity> {
-    return this.request<StravaActivity>("POST", "/activities", {
-      body: options as unknown as Record<string, unknown>,
+    return this.request<StravaActivity, CreateActivityOptions>("POST", "/activities", {
+      body: options,
     });
   }
 
@@ -645,8 +645,8 @@ export class StravaClient {
     activityId: number,
     options: UpdateActivityOptions
   ): Promise<StravaActivity> {
-    return this.request<StravaActivity>("PUT", `/activities/${activityId}`, {
-      body: options as unknown as Record<string, unknown>,
+    return this.request<StravaActivity, UpdateActivityOptions>("PUT", `/activities/${activityId}`, {
+      body: options,
     });
   }
 
@@ -695,8 +695,8 @@ export class StravaClient {
    * Update authenticated athlete
    */
   public async updateAthlete(options: UpdateAthleteOptions): Promise<StravaAthlete> {
-    return this.request<StravaAthlete>("PUT", "/athlete", {
-      body: options as unknown as Record<string, unknown>,
+    return this.request<StravaAthlete, UpdateAthleteOptions>("PUT", "/athlete", {
+      body: options,
     });
   }
 
