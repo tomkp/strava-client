@@ -63,6 +63,22 @@ const STRAVA_OAUTH_BASE_URL = "https://www.strava.com/oauth";
 const DEFAULT_REFRESH_BUFFER = 600; // 10 minutes
 const DEFAULT_TIMEOUT = 30000; // 30 seconds
 
+/** Default stream keys for activity streams (comprehensive set) */
+const DEFAULT_ACTIVITY_STREAM_KEYS: StravaStreamType[] = [
+  "time",
+  "distance",
+  "altitude",
+  "heartrate",
+  "cadence",
+  "watts",
+  "temp",
+  "velocity_smooth",
+  "grade_smooth",
+];
+
+/** Default stream keys for segment and segment effort streams */
+const DEFAULT_SEGMENT_STREAM_KEYS: StravaStreamType[] = ["distance", "altitude"];
+
 type RequiredConfig = Required<Omit<StravaClientConfig, "onRequest" | "onResponse">> &
   Pick<StravaClientConfig, "onRequest" | "onResponse">;
 
@@ -671,19 +687,7 @@ export class StravaClient {
     activityId: number,
     options: GetActivityStreamsOptions = {}
   ): Promise<StravaStreams> {
-    const keys =
-      options.keys ||
-      ([
-        "time",
-        "distance",
-        "altitude",
-        "heartrate",
-        "cadence",
-        "watts",
-        "temp",
-        "velocity_smooth",
-        "grade_smooth",
-      ] as StravaStreamType[]);
+    const keys = options.keys || DEFAULT_ACTIVITY_STREAM_KEYS;
 
     return this.request<StravaStreams>("GET", `/activities/${activityId}/streams`, {
       params: {
@@ -1015,7 +1019,7 @@ export class StravaClient {
     segmentId: number,
     options: GetActivityStreamsOptions = {}
   ): Promise<StravaStreams> {
-    const keys = options.keys || ["distance", "altitude"];
+    const keys = options.keys || DEFAULT_SEGMENT_STREAM_KEYS;
     return this.request<StravaStreams>("GET", `/segments/${segmentId}/streams`, {
       params: {
         keys: keys.join(","),
@@ -1059,7 +1063,7 @@ export class StravaClient {
     effortId: number,
     options: GetActivityStreamsOptions = {}
   ): Promise<StravaStreams> {
-    const keys = options.keys || ["distance", "altitude"];
+    const keys = options.keys || DEFAULT_SEGMENT_STREAM_KEYS;
     return this.request<StravaStreams>("GET", `/segment_efforts/${effortId}/streams`, {
       params: {
         keys: keys.join(","),
