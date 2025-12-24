@@ -676,6 +676,8 @@ export interface StravaClientConfig {
   autoRefresh?: boolean;
   /** Buffer time in seconds before expiry to trigger refresh (default: 600 = 10 minutes) */
   refreshBuffer?: number;
+  /** Default request timeout in milliseconds (default: 30000 = 30 seconds) */
+  timeout?: number;
   /** Optional callback when tokens are refreshed */
   onTokenRefresh?: (tokens: StravaTokens) => void | Promise<void>;
 }
