@@ -255,6 +255,55 @@ describe("StravaClient", () => {
   });
 
   describe("Token Refresh", () => {
+    it("should only refresh token once when multiple concurrent requests need refresh", async () => {
+      // Set token that needs refresh (within refresh buffer)
+      client.setTokens({
+        accessToken: "expiring-token",
+        refreshToken: "refresh-token",
+        expiresAt: Math.floor(Date.now() / 1000) + 60, // Expires in 60s, within 10min buffer
+      });
+
+      const tokenResponse = {
+        access_token: "new-access",
+        refresh_token: "new-refresh",
+        expires_at: Math.floor(Date.now() / 1000) + 3600,
+        token_type: "Bearer",
+        expires_in: 3600,
+        athlete: { id: 123 },
+      };
+
+      // Track how many times refresh endpoint is called
+      let refreshCallCount = 0;
+      mockFetch.mockImplementation((url: string) => {
+        if (url.includes("/oauth/token")) {
+          refreshCallCount++;
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve(tokenResponse),
+            headers: new Headers(),
+          });
+        }
+        // API calls
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ id: 123 }),
+          headers: new Headers(),
+        });
+      });
+
+      // Fire 5 concurrent requests that all need token refresh
+      await Promise.all([
+        client.getAthlete(),
+        client.getAthlete(),
+        client.getAthlete(),
+        client.getAthlete(),
+        client.getAthlete(),
+      ]);
+
+      // Should only have refreshed once, not 5 times
+      expect(refreshCallCount).toBe(1);
+    });
+
     it("should exchange authorization code for tokens", async () => {
       const tokenResponse = {
         access_token: "new-access",
