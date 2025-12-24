@@ -398,8 +398,43 @@ export class StravaClient {
    * Deauthorize the application (revoke access)
    */
   public async deauthorize(): Promise<void> {
-    await this.request<void>('POST', '/oauth/deauthorize');
-    this.clearTokens();
+    // Deauthorize uses the OAuth base URL, not the API base URL
+    if (this.config.autoRefresh && this.tokens) {
+      await this.refreshTokenIfNeeded();
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT);
+
+    try {
+      const response = await fetch(`${STRAVA_OAUTH_BASE_URL}/deauthorize`, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw parseStravaError({
+          status: response.status,
+          data: errorData,
+          headers: response.headers,
+          context: 'Deauthorize',
+        });
+      }
+
+      this.clearTokens();
+    } catch (error) {
+      clearTimeout(timeoutId);
+
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new StravaNetworkError('Request timed out');
+      }
+
+      throw error;
+    }
   }
 
   // ============================================================================
@@ -714,14 +749,86 @@ export class StravaClient {
    * Export route as GPX
    */
   public async exportRouteGPX(routeId: number): Promise<string> {
-    return this.request<string>('GET', `/routes/${routeId}/export_gpx`);
+    // GPX export returns XML, not JSON
+    if (this.config.autoRefresh && this.tokens) {
+      await this.refreshTokenIfNeeded();
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT);
+
+    try {
+      const response = await fetch(`${STRAVA_API_BASE_URL}/routes/${routeId}/export_gpx`, {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+      this.updateRateLimitInfo(response.headers);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw parseStravaError({
+          status: response.status,
+          data: errorData,
+          headers: response.headers,
+        });
+      }
+
+      return await response.text();
+    } catch (error) {
+      clearTimeout(timeoutId);
+
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new StravaNetworkError('Request timed out');
+      }
+
+      throw error;
+    }
   }
 
   /**
    * Export route as TCX
    */
   public async exportRouteTCX(routeId: number): Promise<string> {
-    return this.request<string>('GET', `/routes/${routeId}/export_tcx`);
+    // TCX export returns XML, not JSON
+    if (this.config.autoRefresh && this.tokens) {
+      await this.refreshTokenIfNeeded();
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT);
+
+    try {
+      const response = await fetch(`${STRAVA_API_BASE_URL}/routes/${routeId}/export_tcx`, {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+      this.updateRateLimitInfo(response.headers);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw parseStravaError({
+          status: response.status,
+          data: errorData,
+          headers: response.headers,
+        });
+      }
+
+      return await response.text();
+    } catch (error) {
+      clearTimeout(timeoutId);
+
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new StravaNetworkError('Request timed out');
+      }
+
+      throw error;
+    }
   }
 
   /**

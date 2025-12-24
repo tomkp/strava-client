@@ -623,8 +623,6 @@ export interface GetSegmentEffortsOptions {
   start_date_local?: string;
   /** ISO 8601 formatted date time */
   end_date_local?: string;
-  /** Page number */
-  page?: number;
   /** Number of items per page (max: 200) */
   per_page?: number;
 }
