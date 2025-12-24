@@ -2,18 +2,20 @@
 
 Get up and running with the Strava API Client in 5 minutes.
 
-## 1. Copy the Module
-
-Copy the entire `strava-client` directory to your project:
+## 1. Install the Package
 
 ```bash
-cp -r lib/strava-client /path/to/your/project/lib/
+npm install strava-client
+# or
+yarn add strava-client
+# or
+pnpm add strava-client
 ```
 
 ## 2. Requirements
 
 - Node.js 18+ (uses native fetch)
-- No additional dependencies required
+- Zero runtime dependencies
 
 ## 3. Get Strava API Credentials
 
@@ -37,7 +39,7 @@ REDIRECT_URI=http://localhost:3000/auth/callback
 ### Simple Script Example
 
 ```typescript
-import { StravaClient } from "./lib/strava-client";
+import { StravaClient } from "strava-client";
 
 async function main() {
   // Initialize client
@@ -69,7 +71,7 @@ main();
 
 ```typescript
 import express from "express";
-import { StravaClient } from "./lib/strava-client";
+import { StravaClient } from "strava-client";
 
 const app = express();
 const client = new StravaClient({
@@ -246,7 +248,7 @@ console.log("YTD distance:", stats.ytd_run_totals?.distance);
 Always wrap API calls in try-catch blocks:
 
 ```typescript
-import { StravaRateLimitError, StravaAuthenticationError } from "./lib/strava-client";
+import { StravaRateLimitError, StravaAuthenticationError } from "strava-client";
 
 try {
   const activities = await client.getActivities();
@@ -283,7 +285,7 @@ if (rateLimits) {
 The client is fully typed:
 
 ```typescript
-import { StravaActivity, StravaAthlete } from './lib/strava-client';
+import { StravaActivity, StravaAthlete } from 'strava-client';
 
 // TypeScript knows the exact structure
 const activity: StravaActivity = await client.getActivity(123);
@@ -302,7 +304,7 @@ Here's a complete, minimal working example:
 ```typescript
 import express from "express";
 import cookieParser from "cookie-parser";
-import { StravaClient } from "./lib/strava-client";
+import { StravaClient } from "strava-client";
 
 const app = express();
 app.use(cookieParser());
