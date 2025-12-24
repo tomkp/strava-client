@@ -583,6 +583,7 @@ describe("StravaClient", () => {
               () =>
                 resolve({
                   ok: true,
+                  status: 200,
                   json: () => Promise.resolve({ id: 123 }),
                   headers: new Headers(),
                 }),
