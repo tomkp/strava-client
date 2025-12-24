@@ -17,7 +17,10 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
-    "checks": "npm run typecheck && npm run lint && npm run format"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "checks": "npm run typecheck && npm run lint && npm run format && npm run test"
   },
   "keywords": [
     "strava",
@@ -44,11 +47,13 @@
   "devDependencies": {
     "@eslint/js": "^9.39.2",
     "@types/node": "^20.0.0",
+    "@vitest/coverage-v8": "^4.0.16",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.7.4",
     "typescript": "^5.0.0",
-    "typescript-eslint": "^8.50.1"
+    "typescript-eslint": "^8.50.1",
+    "vitest": "^4.0.16"
   },
   "engines": {
     "node": ">=18.0.0"
