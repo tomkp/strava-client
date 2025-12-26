@@ -1,5 +1,5 @@
 {
-  "name": "strava-client",
+  "name": "@tomkp/strava",
   "version": "1.0.0",
   "description": "A complete, type-safe TypeScript client for the Strava API v3",
   "main": "dist/cjs/index.js",

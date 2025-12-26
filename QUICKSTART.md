@@ -5,11 +5,11 @@ Get up and running with the Strava API Client in 5 minutes.
 ## 1. Install the Package
 
 ```bash
-npm install strava-client
+npm install @tomkp/strava
 # or
-yarn add strava-client
+yarn add @tomkp/strava
 # or
-pnpm add strava-client
+pnpm add @tomkp/strava
 ```
 
 ## 2. Requirements
@@ -39,7 +39,7 @@ REDIRECT_URI=http://localhost:3000/auth/callback
 ### Simple Script Example
 
 ```typescript
-import { StravaClient } from "strava-client";
+import { StravaClient } from "@tomkp/strava";
 
 async function main() {
   // Initialize client
@@ -71,7 +71,7 @@ main();
 
 ```typescript
 import express from "express";
-import { StravaClient } from "strava-client";
+import { StravaClient } from "@tomkp/strava";
 
 const app = express();
 const client = new StravaClient({
@@ -248,7 +248,7 @@ console.log("YTD distance:", stats.ytd_run_totals?.distance);
 Always wrap API calls in try-catch blocks:
 
 ```typescript
-import { StravaRateLimitError, StravaAuthenticationError } from "strava-client";
+import { StravaRateLimitError, StravaAuthenticationError } from "@tomkp/strava";
 
 try {
   const activities = await client.getActivities();
@@ -285,7 +285,7 @@ if (rateLimits) {
 The client is fully typed:
 
 ```typescript
-import { StravaActivity, StravaAthlete } from 'strava-client';
+import { StravaActivity, StravaAthlete } from '@tomkp/strava';
 
 // TypeScript knows the exact structure
 const activity: StravaActivity = await client.getActivity(123);
@@ -304,7 +304,7 @@ Here's a complete, minimal working example:
 ```typescript
 import express from "express";
 import cookieParser from "cookie-parser";
-import { StravaClient } from "strava-client";
+import { StravaClient } from "@tomkp/strava";
 
 const app = express();
 app.use(cookieParser());

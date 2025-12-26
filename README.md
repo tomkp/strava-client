@@ -1,4 +1,4 @@
-# strava-client
+# @tomkp/strava
 
 A complete, type-safe TypeScript client for the Strava API v3.
 
@@ -15,11 +15,11 @@ A complete, type-safe TypeScript client for the Strava API v3.
 ## Installation
 
 ```bash
-npm install strava-client
+npm install @tomkp/strava
 # or
-yarn add strava-client
+yarn add @tomkp/strava
 # or
-pnpm add strava-client
+pnpm add @tomkp/strava
 ```
 
 > **Note**: Requires Node.js 18+ (uses native fetch)
@@ -29,7 +29,7 @@ pnpm add strava-client
 ### 1. Initialize the Client
 
 ```typescript
-import { StravaClient } from "strava-client";
+import { StravaClient } from "@tomkp/strava";
 
 const client = new StravaClient({
   clientId: process.env.STRAVA_CLIENT_ID!,
@@ -75,7 +75,7 @@ const streams = await client.getActivityStreams(activityId);
 
 ```typescript
 import express from "express";
-import { StravaClient, StravaTokens } from "strava-client";
+import { StravaClient, StravaTokens } from "@tomkp/strava";
 
 const app = express();
 
@@ -137,7 +137,7 @@ app.get("/api/activities", async (req, res) => {
 ### With Automatic Token Refresh
 
 ```typescript
-import { StravaClient } from "strava-client";
+import { StravaClient } from "@tomkp/strava";
 
 const client = new StravaClient({
   clientId: process.env.STRAVA_CLIENT_ID!,
@@ -204,7 +204,7 @@ import {
   StravaAuthenticationError,
   StravaNotFoundError,
   isStravaErrorType,
-} from "strava-client";
+} from "@tomkp/strava";
 
 try {
   const activities = await client.getActivities();
