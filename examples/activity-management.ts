@@ -76,7 +76,9 @@ async function createRunActivity() {
 
   console.log(`Run activity created!`);
   console.log(`   Distance: ${(activity.distance / 1000).toFixed(2)} km`);
-  console.log(`   Pace: ${(activity.elapsed_time / 60 / (activity.distance / 1000)).toFixed(2)} min/km`);
+  console.log(
+    `   Pace: ${(activity.elapsed_time / 60 / (activity.distance / 1000)).toFixed(2)} min/km`
+  );
 
   return activity;
 }
@@ -338,8 +340,14 @@ async function getActivityLaps(activityId: number) {
     const pace = lap.moving_time / 60 / (lap.distance / 1000);
     console.log(`Lap ${index + 1}:`);
     console.log(`   Distance: ${(lap.distance / 1000).toFixed(2)} km`);
-    console.log(`   Time: ${Math.round(lap.moving_time / 60)}:${(lap.moving_time % 60).toString().padStart(2, "0")}`);
-    console.log(`   Pace: ${Math.floor(pace)}:${Math.round((pace % 1) * 60).toString().padStart(2, "0")} /km`);
+    console.log(
+      `   Time: ${Math.round(lap.moving_time / 60)}:${(lap.moving_time % 60).toString().padStart(2, "0")}`
+    );
+    console.log(
+      `   Pace: ${Math.floor(pace)}:${Math.round((pace % 1) * 60)
+        .toString()
+        .padStart(2, "0")} /km`
+    );
     if (lap.average_heartrate) {
       console.log(`   Avg HR: ${lap.average_heartrate} bpm`);
     }
@@ -408,7 +416,7 @@ async function processActivitiesWithRateLimiting(activityIds: number[]) {
     } catch (error) {
       if (error instanceof StravaRateLimitError) {
         console.log(`\nRate limit exceeded. Waiting ${error.retryAfter} seconds...`);
-        await new Promise((resolve) => setTimeout(resolve, error.retryAfter * 1000));
+        await new Promise((resolve) => setTimeout(resolve, (error.retryAfter ?? 60) * 1000));
         // Retry this activity
         try {
           const activity = await client.getActivity(activityId);
@@ -422,7 +430,9 @@ async function processActivitiesWithRateLimiting(activityIds: number[]) {
     }
   }
 
-  console.log(`\nProcessed ${results.filter((r) => r.success).length}/${activityIds.length} successfully`);
+  console.log(
+    `\nProcessed ${results.filter((r) => r.success).length}/${activityIds.length} successfully`
+  );
   return results;
 }
 

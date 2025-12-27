@@ -74,7 +74,9 @@ async function earlyTerminationExample() {
       console.log(`Found it! "${activity.name}"`);
       console.log(`   Date: ${activity.start_date_local}`);
       console.log(`   Distance: ${(activity.distance / 1000).toFixed(2)} km`);
-      console.log(`   Time: ${Math.floor(activity.moving_time / 3600)}h ${Math.round((activity.moving_time % 3600) / 60)}m`);
+      console.log(
+        `   Time: ${Math.floor(activity.moving_time / 3600)}h ${Math.round((activity.moving_time % 3600) / 60)}m`
+      );
       return activity; // Stop fetching more pages
     }
   }
@@ -103,7 +105,9 @@ async function dateRangeExample() {
   for await (const activity of client.iterateActivities({ after: thirtyDaysAgo })) {
     count++;
     totalTime += activity.moving_time;
-    console.log(`${activity.start_date_local.split("T")[0]}: ${activity.name} (${Math.round(activity.moving_time / 60)} min)`);
+    console.log(
+      `${activity.start_date_local.split("T")[0]}: ${activity.name} (${Math.round(activity.moving_time / 60)} min)`
+    );
   }
 
   console.log(`\nLast 30 days: ${count} activities, ${(totalTime / 3600).toFixed(1)} hours\n`);
@@ -312,12 +316,16 @@ async function streamingStatsExample() {
   console.log(`Total time: ${(stats.totalTime / 3600).toFixed(0)} hours`);
   console.log(`Total elevation: ${stats.totalElevation.toFixed(0)} m`);
 
-  console.log(`\nLongest activity: "${stats.longestActivity.name}" (${(stats.longestActivity.distance / 1000).toFixed(2)} km)`);
+  console.log(
+    `\nLongest activity: "${stats.longestActivity.name}" (${(stats.longestActivity.distance / 1000).toFixed(2)} km)`
+  );
 
   if (stats.fastestPace.pace < Infinity) {
     const paceMin = Math.floor(stats.fastestPace.pace);
     const paceSec = Math.round((stats.fastestPace.pace % 1) * 60);
-    console.log(`Fastest run pace: ${paceMin}:${paceSec.toString().padStart(2, "0")} /km ("${stats.fastestPace.name}")`);
+    console.log(
+      `Fastest run pace: ${paceMin}:${paceSec.toString().padStart(2, "0")} /km ("${stats.fastestPace.name}")`
+    );
   }
 
   console.log("\nBy Year:");
@@ -331,7 +339,9 @@ async function streamingStatsExample() {
   Object.entries(stats.byType)
     .sort((a, b) => b[1].count - a[1].count)
     .forEach(([type, data]) => {
-      console.log(`   ${type}: ${data.count} activities, ${(data.distance / 1000).toFixed(0)} km, ${(data.time / 3600).toFixed(0)} hrs`);
+      console.log(
+        `   ${type}: ${data.count} activities, ${(data.distance / 1000).toFixed(0)} km, ${(data.time / 3600).toFixed(0)} hrs`
+      );
     });
 
   return stats;
@@ -407,7 +417,9 @@ async function starredSegmentsIterationExample() {
       .sort((a, b) => b.grade - a.grade)
       .slice(0, 5)
       .forEach((climb) => {
-        console.log(`   ${climb.name}: ${climb.grade.toFixed(1)}% over ${(climb.distance / 1000).toFixed(2)} km`);
+        console.log(
+          `   ${climb.name}: ${climb.grade.toFixed(1)}% over ${(climb.distance / 1000).toFixed(2)} km`
+        );
       });
   }
 }

@@ -18,6 +18,26 @@ export interface StravaErrorResponse {
 }
 
 // ============================================================================
+// Error Code Type
+// ============================================================================
+
+/**
+ * Union type of all Strava error codes for exhaustiveness checking
+ */
+export type StravaErrorCode =
+  | "STRAVA_ERROR"
+  | "STRAVA_AUTH_ERROR"
+  | "STRAVA_AUTHORIZATION_ERROR"
+  | "STRAVA_NOT_FOUND"
+  | "STRAVA_RATE_LIMIT"
+  | "STRAVA_TOKEN_REFRESH_ERROR"
+  | "STRAVA_VALIDATION_ERROR"
+  | "STRAVA_NETWORK_ERROR"
+  | "STRAVA_API_ERROR"
+  | "STRAVA_HTTP_ERROR"
+  | "STRAVA_UNKNOWN_ERROR";
+
+// ============================================================================
 // Base Error Class
 // ============================================================================
 
@@ -26,10 +46,10 @@ export interface StravaErrorResponse {
  */
 export class StravaError extends Error {
   public readonly statusCode?: number;
-  public readonly code: string;
+  public readonly code: StravaErrorCode;
   public readonly context?: string;
 
-  constructor(message: string, code: string = "STRAVA_ERROR", statusCode?: number) {
+  constructor(message: string, code: StravaErrorCode = "STRAVA_ERROR", statusCode?: number) {
     super(message);
     this.name = "StravaError";
     this.code = code;

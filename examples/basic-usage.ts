@@ -4,14 +4,7 @@
  * including proper error handling for different error types.
  */
 
-import {
-  StravaClient,
-  StravaRateLimitError,
-  StravaAuthenticationError,
-  StravaNotFoundError,
-  StravaValidationError,
-  StravaNetworkError,
-} from "../index";
+import { StravaClient, StravaError, StravaRateLimitError } from "../index";
 
 async function basicUsage() {
   // Initialize the client with optional callbacks
@@ -133,7 +126,9 @@ async function basicUsage() {
       const laps = await client.getActivityLaps(firstActivity.id);
       console.log(`   Found ${laps.length} laps`);
       laps.slice(0, 3).forEach((lap, index) => {
-        console.log(`      Lap ${index + 1}: ${(lap.distance / 1000).toFixed(2)} km in ${Math.round(lap.moving_time / 60)} min`);
+        console.log(
+          `      Lap ${index + 1}: ${(lap.distance / 1000).toFixed(2)} km in ${Math.round(lap.moving_time / 60)} min`
+        );
       });
       if (laps.length > 3) {
         console.log(`      ... and ${laps.length - 3} more laps`);
@@ -168,24 +163,27 @@ async function basicUsage() {
 
     console.log("Example completed successfully!");
   } catch (error) {
-    // Proper error handling for different error types
-    if (error instanceof StravaRateLimitError) {
-      console.error("Rate limit exceeded!");
-      console.error(`   Retry after: ${error.retryAfter} seconds`);
-      console.error(`   Limit: ${error.limit}`);
-    } else if (error instanceof StravaAuthenticationError) {
-      console.error("Authentication error!");
-      console.error("   Your tokens may be invalid or expired.");
-      console.error("   Re-authenticate the user through the OAuth flow.");
-    } else if (error instanceof StravaNotFoundError) {
-      console.error("Resource not found!");
-      console.error(`   ${error.message}`);
-    } else if (error instanceof StravaValidationError) {
-      console.error("Validation error!");
-      console.error(`   ${error.message}`);
-    } else if (error instanceof StravaNetworkError) {
-      console.error("Network error!");
-      console.error("   Check your internet connection.");
+    if (error instanceof StravaError) {
+      switch (error.code) {
+        case "STRAVA_RATE_LIMIT":
+          const rateLimitError = error as StravaRateLimitError;
+          console.error(`Rate limit exceeded. Retry after: ${rateLimitError.retryAfter}s`);
+          break;
+        case "STRAVA_AUTH_ERROR":
+          console.error("Authentication failed. Re-authenticate via OAuth.");
+          break;
+        case "STRAVA_NOT_FOUND":
+          console.error(`Resource not found: ${error.message}`);
+          break;
+        case "STRAVA_VALIDATION_ERROR":
+          console.error(`Validation error: ${error.message}`);
+          break;
+        case "STRAVA_NETWORK_ERROR":
+          console.error("Network error. Check your connection.");
+          break;
+        default:
+          console.error(`Strava error [${error.code}]: ${error.message}`);
+      }
     } else {
       console.error("Unexpected error:", error);
     }

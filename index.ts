@@ -100,3 +100,4 @@ export {
   parseStravaError,
   isStravaErrorType,
 } from "./errors";
+export type { StravaErrorCode } from "./errors";
