@@ -1,6 +1,10 @@
 /**
  * Express Server Example
  * Complete example of integrating the Strava API client with Express.js
+ *
+ * Required dependencies (install separately):
+ *   npm install express cookie-parser
+ *   npm install -D @types/express @types/cookie-parser
  */
 
 import express, { Request, Response } from "express";

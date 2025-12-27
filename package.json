@@ -53,12 +53,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tomkp/strava-client.git"
+    "url": "git+https://github.com/tomkp/strava.git"
   },
   "bugs": {
-    "url": "https://github.com/tomkp/strava-client/issues"
+    "url": "https://github.com/tomkp/strava/issues"
   },
-  "homepage": "https://github.com/tomkp/strava-client#readme",
+  "homepage": "https://github.com/tomkp/strava#readme",
   "devDependencies": {
     "@eslint/js": "^9.39.2",
     "@types/node": "^20.0.0",
